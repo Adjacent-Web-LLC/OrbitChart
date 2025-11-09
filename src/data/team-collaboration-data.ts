@@ -36,7 +36,7 @@ export const teamCollaborationData: RadialOrbitData = {
           label: 'Jira',
           value: 95,
           color: '#10b981',
-          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Atlassian_Jira_Logo.svg/1200px-Atlassian_Jira_Logo.svg.png',
+          iconUrl: 'https://logo.clearbit.com/atlassian.com',
           meta: { teamSize: 25, projects: 15 },
         },
         {
@@ -98,7 +98,7 @@ export const teamCollaborationData: RadialOrbitData = {
           label: 'Datadog',
           value: 88,
           color: '#ef4444',
-          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Datadog_logo.svg/1200px-Datadog_logo.svg.png',
+          iconUrl: 'https://logo.clearbit.com/datadoghq.com',
           meta: { teamSize: 10, dashboards: 25 },
         },
         {

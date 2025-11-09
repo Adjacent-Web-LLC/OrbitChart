@@ -71,6 +71,56 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     orbitSpeedBase: animation.orbitSpeedBase ?? 60,
     hoverScale: animation.hoverScale ?? 1.1,
     orbits: animation.orbits, // Can be undefined, [], or string[]
+    dataLoadedAnimation: animation.dataLoadedAnimation ?? 'sides', // Default to 'sides'
+  };
+
+  // Helper function to get data loaded animation style and transform
+  const getDataLoadedAnimationStyle = (
+    itemIndex: number,
+    finalX: number,
+    finalY: number,
+    centerX: number,
+    centerY: number
+  ): { style: React.CSSProperties; animationId?: string } => {
+    const animationType = mergedAnimation.dataLoadedAnimation;
+    
+    if (animationType === 'none') {
+      return { style: {} };
+    }
+    
+    const delay = `${itemIndex * 0.05}s`;
+    const duration = '0.5s';
+    const easing = 'ease-out';
+    
+    if (animationType === 'center') {
+      // Calculate transform to start at center and move to final position
+      // Items are positioned at (pos.x, pos.y), center is at (centerX, centerY)
+      // To move FROM center TO final position, we need to translate by (centerX - pos.x, centerY - pos.y)
+      // This positions the item at center initially, then animate to translate(0, 0) = final position
+      const startTranslateX = centerX - finalX;
+      const startTranslateY = centerY - finalY;
+      
+      // Create unique animation ID based on start position
+      const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
+      
+      return {
+        style: {
+          animation: `${animationId} ${duration} ${easing}`,
+          animationDelay: delay,
+          animationFillMode: 'backwards',
+        } as React.CSSProperties,
+        animationId,
+      };
+    }
+    
+    // Default: 'sides' - scale and fade in from position
+    return {
+      style: {
+        animation: 'radial-orbit-fadeIn 0.5s ease-out',
+        animationDelay: delay,
+        animationFillMode: 'backwards',
+      },
+    };
   };
   
   // Calculate scale factor based on container size (using minimum dimension for square aspect ratio)
@@ -521,6 +571,23 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         )}
 
         {(() => {
+          // Collect all items for center animation keyframe generation
+          const centerAnimationKeyframes = new Map<string, { x: number; y: number }>();
+          if (mergedAnimation.dataLoadedAnimation === 'center') {
+            processedGroups.forEach((group) => {
+              group.sortedItems.forEach((item, itemIndex) => {
+                const angle = group.angles[itemIndex];
+                const pos = polarToCartesian(centerX, centerY, group.radius, angle);
+                const startTranslateX = centerX - pos.x;
+                const startTranslateY = centerY - pos.y;
+                const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
+                if (!centerAnimationKeyframes.has(animationId)) {
+                  centerAnimationKeyframes.set(animationId, { x: startTranslateX, y: startTranslateY });
+                }
+              });
+            });
+          }
+
           // Group by orbit (radius) to handle shared orbits
           const groupsByOrbit = new Map<number, Array<typeof processedGroups[0]>>();
           processedGroups.forEach((group) => {
@@ -583,6 +650,58 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                         isHovered || isGroupHovered ? mergedAnimation.hoverScale : 1;
 
                       if (renderItem) {
+                        const animationData = getDataLoadedAnimationStyle(
+                          itemIndex,
+                          pos.x,
+                          pos.y,
+                          centerX,
+                          centerY
+                        );
+                        
+                        // For center animation, wrap in a group with CSS transform
+                        if (mergedAnimation.dataLoadedAnimation === 'center') {
+                          const startTranslateX = centerX - pos.x;
+                          const startTranslateY = centerY - pos.y;
+                          const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
+                          
+                        return (
+                          <g
+                            key={item.id}
+                            style={{
+                              animation: `${animationId} 0.5s ease-out`,
+                              animationDelay: `${itemIndex * 0.05}s`,
+                              animationFillMode: 'backwards',
+                              transformOrigin: `${centerX}px ${centerY}px`,
+                            }}
+                          >
+                              <foreignObject
+                                x={pos.x - itemRadius * 0.55}
+                                y={pos.y - itemRadius * 0.55}
+                                width={itemRadius * 1.1}
+                                height={itemRadius * 1.1}
+                              >
+                                {renderItem({
+                                  item,
+                                  group,
+                                  position: pos,
+                                  radius: itemRadius,
+                                  angle,
+                                  isHovered,
+                                  isGroupHovered,
+                                  scale,
+                                  itemIndex,
+                                  groupIndex: orbitIndex,
+                                  centerX,
+                                  centerY,
+                                  onMouseEnter: (e) => handleItemHover(item, e),
+                                  onMouseLeave: () => handleItemHover(null),
+                                  onClick: () => onItemSelect?.(item, group),
+                                })}
+                              </foreignObject>
+                            </g>
+                          );
+                        }
+                        
                         return (
                         <foreignObject
                             key={item.id}
@@ -590,11 +709,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                             y={pos.y - itemRadius * 0.55}
                             width={itemRadius * 1.1}
                             height={itemRadius * 1.1}
-                            style={{
-                              animation: 'radial-orbit-fadeIn 0.5s ease-out',
-                              animationDelay: `${itemIndex * 0.05}s`,
-                              animationFillMode: 'backwards',
-                            }}
+                            style={animationData.style}
                         >
                             {renderItem({
                               item,
@@ -617,14 +732,78 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                         );
                       }
 
+                      const animationData = getDataLoadedAnimationStyle(
+                        itemIndex,
+                        pos.x,
+                        pos.y,
+                        centerX,
+                        centerY
+                      );
+
+                      // For center animation, wrap in a group with CSS transform
+                      if (mergedAnimation.dataLoadedAnimation === 'center') {
+                        const startTranslateX = centerX - pos.x;
+                        const startTranslateY = centerY - pos.y;
+                        const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
+                        
+                        return (
+                          <g
+                            key={item.id}
+                            style={{
+                              animation: `${animationId} 0.5s ease-out`,
+                              animationDelay: `${itemIndex * 0.05}s`,
+                              animationFillMode: 'backwards',
+                              transformOrigin: `${centerX}px ${centerY}px`,
+                            }}
+                          >
+                            <circle
+                              cx={pos.x}
+                              cy={pos.y}
+                              r={itemRadius * scale}
+                              fill={item.color || group.color || '#60a5fa'}
+                              stroke="rgba(255, 255, 255, 0.3)"
+                              strokeWidth="2"
+                              filter={item.glow ? 'url(#glow)' : 'none'}
+                              style={{
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                opacity: isHovered ? 1 : 0.85,
+                              }}
+                              onMouseEnter={(e) => handleItemHover(item, e)}
+                              onMouseLeave={() => handleItemHover(null)}
+                              onClick={() => onItemSelect?.(item, group)}
+                            />
+                            {item.iconUrl && (
+                              <image
+                                href={item.iconUrl}
+                                x={pos.x - itemRadius * 0.55}
+                                y={pos.y - itemRadius * 0.55}
+                                width={itemRadius * 1.1}
+                                height={itemRadius * 1.1}
+                                style={{ pointerEvents: 'none' }}
+                              />
+                            )}
+                            {isHovered && (
+                              <text
+                                x={pos.x}
+                                y={pos.y + itemRadius + 15 * scaleFactor}
+                                textAnchor="middle"
+                                fill="white"
+                                fontSize={11 * scaleFactor}
+                                fontWeight="500"
+                                style={{ pointerEvents: 'none' }}
+                              >
+                                {item.label}
+                              </text>
+                            )}
+                          </g>
+                        );
+                      }
+
                       return (
                         <g
                           key={item.id}
-                          style={{
-                            animation: 'radial-orbit-fadeIn 0.5s ease-out',
-                            animationDelay: `${itemIndex * 0.05}s`,
-                            animationFillMode: 'backwards',
-                          }}
+                          style={animationData.style}
                         >
                           <circle
                             cx={pos.x}
@@ -716,6 +895,42 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
             transform: scale(1);
           }
         }
+
+        ${(() => {
+          // Generate unique keyframes for each center animation start position
+          const keyframes: string[] = [];
+          const seenIds = new Set<string>();
+          
+          if (mergedAnimation.dataLoadedAnimation === 'center') {
+            processedGroups.forEach((group) => {
+              group.sortedItems.forEach((item, itemIndex) => {
+                const angle = group.angles[itemIndex];
+                const pos = polarToCartesian(centerX, centerY, group.radius, angle);
+                const startTranslateX = centerX - pos.x;
+                const startTranslateY = centerY - pos.y;
+                const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
+                
+                // Only generate keyframe once per unique position
+                if (!seenIds.has(animationId)) {
+                  seenIds.add(animationId);
+                  keyframes.push(`
+                    @keyframes ${animationId} {
+                      from {
+                        opacity: 0;
+                        transform: translate(${startTranslateX}px, ${startTranslateY}px) scale(0);
+                      }
+                      to {
+                        opacity: 1;
+                        transform: translate(0, 0) scale(1);
+                      }
+                    }
+                  `);
+                }
+              });
+            });
+          }
+          return keyframes.join('');
+        })()}
       `}</style>
     </div>
   );

@@ -69,7 +69,7 @@ export const userApplicationsData: RadialOrbitData = {
           label: 'Jira',
           value: 75,
           color: '#eab308',
-          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Atlassian_Jira_Logo.svg/1200px-Atlassian_Jira_Logo.svg.png',
+          iconUrl: 'https://logo.clearbit.com/atlassian.com',
           meta: { lastLogin: '2 days ago', usageFrequency: 'weekly' },
         },
         {
@@ -116,7 +116,7 @@ export const userApplicationsData: RadialOrbitData = {
           label: 'Datadog',
           value: 40,
           color: '#ef4444',
-          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Datadog_logo.svg/1200px-Datadog_logo.svg.png',
+          iconUrl: 'https://logo.clearbit.com/datadoghq.com',
           meta: { lastLogin: '1 week ago', usageFrequency: 'monthly' },
         },
         {
@@ -124,7 +124,7 @@ export const userApplicationsData: RadialOrbitData = {
           label: 'Stripe',
           value: 35,
           color: '#ef4444',
-          iconUrl: 'https://images.ctfassets.net/gm7wg57pxurp/5f1H0D8i3Kh1qWbMhI8kK6/0e89bde5afc27ea29f98e8d866b25a59/Stripe_logo_revised_revised.png',
+          iconUrl: 'https://logo.clearbit.com/stripe.com',
           meta: { lastLogin: '3 weeks ago', usageFrequency: 'monthly' },
         },
         {

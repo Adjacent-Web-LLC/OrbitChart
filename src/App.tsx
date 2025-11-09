@@ -29,11 +29,13 @@ function App() {
     orbitSpeedBase: number;
     hoverScale: number;
     orbits?: string[];
+    dataLoadedAnimation?: 'sides' | 'center' | 'none';
   }>({
     orbitRotation: true,
     orbitSpeedBase: 80,
     hoverScale: 1.15,
     orbits: undefined, // undefined = animate all, [] = animate none, [ids] = animate selected
+    dataLoadedAnimation: 'sides', // Default to 'sides'
   });
   
   // Initialize visibleGroups based on current data set
@@ -479,6 +481,43 @@ function App() {
                 </div>
               </div>
             )}
+            
+            {/* Data Loaded Animation */}
+            <div style={{ marginTop: '16px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  color: '#cbd5e1',
+                  fontSize: '12px',
+                  marginBottom: '6px',
+                }}
+              >
+                Data Loaded Animation
+              </label>
+              <select
+                value={animation.dataLoadedAnimation ?? 'sides'}
+                onChange={(e) =>
+                  setAnimation({
+                    ...animation,
+                    dataLoadedAnimation: e.target.value as 'sides' | 'center' | 'none',
+                  })
+                }
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                  border: '1px solid rgba(51, 65, 85, 1)',
+                  color: '#cbd5e1',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="sides">Sides (Scale & Fade)</option>
+                <option value="center">Center (From Center)</option>
+                <option value="none">None</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1102,17 +1141,17 @@ function App() {
           }}
         >
         <RadialOrbit
-            data={filteredData}
-            width={chartSize.width}
-            height={chartSize.height}
+          data={filteredData}
+          width={chartSize.width}
+          height={chartSize.height}
           sortableBy="value"
           onGroupSelect={handleGroupSelect}
           onItemSelect={handleItemSelect}
           onDialSelect={handleDialSelect}
-            animation={animation}
-            groupBy={groupBy}
-            groupOrbits={groupOrbits}
-            orbitPaths={orbitPaths}
+          animation={animation}
+          groupBy={groupBy}
+          groupOrbits={groupOrbits}
+          orbitPaths={orbitPaths}
           colors={{
             background: 'transparent',
             ring: 'rgba(100, 116, 139, 0.3)',

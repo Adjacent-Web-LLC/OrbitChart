@@ -71,6 +71,7 @@ export type RadialOrbitProps = {
     orbitSpeedBase?: number;
     hoverScale?: number;
     orbits?: string[];
+    dataLoadedAnimation?: 'sides' | 'center' | 'none';
   };
   colors?: {
     background?: string;

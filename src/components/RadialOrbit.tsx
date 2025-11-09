@@ -29,6 +29,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
   onDialSelect,
   renderItem,
   groupBy = false,
+  groupOrbits,
   orbitPaths = {
     show: true,
     strokeWidth: 2,
@@ -77,6 +78,118 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
   const maxAvailableRadius = Math.min(width, height) / 2 - 50 * scaleFactor;
 
   const processedGroups = useMemo(() => {
+    // If groupOrbits is provided, reorganize groups into orbits
+    if (groupOrbits && groupOrbits.length > 0) {
+      const groupMap = new Map(data.groups.map(g => [g.id, g]));
+      const processedOrbits: Array<{
+        orbitIndex: number;
+        radius: number;
+        groups: Array<{
+          group: RadialOrbitGroup;
+          sortedItems: RadialOrbitItem[];
+          minValue: number;
+          maxValue: number;
+          itemStartIndex: number;
+        }>;
+        allItems: Array<{ item: RadialOrbitItem; group: RadialOrbitGroup }>;
+        angles: number[];
+      }> = [];
+
+      groupOrbits.forEach((orbitGroupIds, orbitIndex) => {
+        // Get groups for this orbit
+        const orbitGroups = orbitGroupIds
+          .map(id => groupMap.get(id))
+          .filter((g): g is RadialOrbitGroup => g !== undefined);
+
+        if (orbitGroups.length === 0) return;
+
+        // Calculate orbit radius
+        let radius = baseOrbitRadius + orbitIndex * orbitSpacing;
+        if (radius > maxAvailableRadius) {
+          const availableForOrbits = maxAvailableRadius - baseOrbitRadius;
+          radius = baseOrbitRadius + (availableForOrbits / groupOrbits.length) * (orbitIndex + 1);
+        }
+
+        // Collect all items from all groups in this orbit, maintaining order
+        const allItems: Array<{ item: RadialOrbitItem; group: RadialOrbitGroup }> = [];
+        const groupsWithItems: Array<{
+          group: RadialOrbitGroup;
+          sortedItems: RadialOrbitItem[];
+          minValue: number;
+          maxValue: number;
+          itemStartIndex: number;
+        }> = [];
+
+        orbitGroups.forEach((group) => {
+          const sortedItems = sortItems(group.items, sortableBy);
+          const allValues = sortedItems.map((item) => item.value);
+          const minValue = Math.min(...allValues);
+          const maxValue = Math.max(...allValues);
+          const itemStartIndex = allItems.length;
+
+          sortedItems.forEach(item => {
+            allItems.push({ item, group });
+          });
+
+          groupsWithItems.push({
+            group,
+            sortedItems,
+            minValue,
+            maxValue,
+            itemStartIndex,
+          });
+        });
+
+        // Distribute angles for all items in this orbit
+        const angles = groupBy
+          ? distributeAnglesGrouped(allItems.length, orbitIndex, groupOrbits.length)
+          : distributeAngles(allItems.length);
+
+        processedOrbits.push({
+          orbitIndex,
+          radius,
+          groups: groupsWithItems,
+          allItems,
+          angles,
+        });
+      });
+
+      // Convert back to flat structure for rendering
+      const flatGroups: Array<RadialOrbitGroup & {
+        sortedItems: RadialOrbitItem[];
+        radius: number;
+        minValue: number;
+        maxValue: number;
+        angles: number[];
+        orbitIndex: number;
+        itemStartIndex: number;
+      }> = [];
+
+      processedOrbits.forEach((orbit) => {
+        orbit.groups.forEach((groupData) => {
+          // Get angles for this group's items
+          const groupAngles = orbit.angles.slice(
+            groupData.itemStartIndex,
+            groupData.itemStartIndex + groupData.sortedItems.length
+          );
+
+          flatGroups.push({
+            ...groupData.group,
+            sortedItems: groupData.sortedItems,
+            radius: orbit.radius,
+            minValue: groupData.minValue,
+            maxValue: groupData.maxValue,
+            angles: groupAngles,
+            orbitIndex: orbit.orbitIndex,
+            itemStartIndex: groupData.itemStartIndex,
+          });
+        });
+      });
+
+      return flatGroups;
+    }
+
+    // Default behavior: one group per orbit
     const groups = data.groups.map((group, index) => {
       const sortedItems = sortItems(group.items, sortableBy);
       
@@ -106,11 +219,21 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         minValue,
         maxValue,
         angles,
+        orbitIndex: index,
+        itemStartIndex: 0,
+      } as RadialOrbitGroup & {
+        sortedItems: RadialOrbitItem[];
+        radius: number;
+        minValue: number;
+        maxValue: number;
+        angles: number[];
+        orbitIndex: number;
+        itemStartIndex: number;
       };
     });
     
     return groups;
-  }, [data.groups, sortableBy, baseOrbitRadius, orbitSpacing, maxAvailableRadius, groupBy]);
+  }, [data.groups, sortableBy, baseOrbitRadius, orbitSpacing, maxAvailableRadius, groupBy, groupOrbits]);
 
   const handleGroupHover = (
     group: RadialOrbitGroup | null,
@@ -219,47 +342,103 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           </radialGradient>
         </defs>
 
-        {orbitPaths.show !== false && processedGroups.map((group) => {
-          // Determine ring color based on group type
-          let ringColor = colors.ring;
-          if (group.id === 'finance') {
-            ringColor = 'rgba(16, 185, 129, 0.7)'; // green - more visible
-          } else if (group.id === 'company-stack') {
-            ringColor = 'rgba(234, 179, 8, 0.7)'; // yellow - more visible
-          } else if (group.id === 'shadow-it') {
-            ringColor = 'rgba(239, 68, 68, 0.7)'; // red - more visible
+        {orbitPaths.show !== false && (() => {
+          // When groupOrbits is used, render one ring per unique radius
+          // Otherwise, render one ring per group
+          if (groupOrbits && groupOrbits.length > 0) {
+            const uniqueOrbits = new Map<number, RadialOrbitGroup[]>();
+            processedGroups.forEach((group) => {
+              const existing = uniqueOrbits.get(group.radius) || [];
+              uniqueOrbits.set(group.radius, [...existing, group]);
+            });
+
+            return Array.from(uniqueOrbits.entries()).map(([radius, groups]) => {
+              // Use first group's color for the ring
+              const firstGroup = groups[0];
+              let ringColor = colors.ring;
+              if (firstGroup.id === 'finance') {
+                ringColor = 'rgba(16, 185, 129, 0.7)'; // green
+              } else if (firstGroup.id === 'company-stack') {
+                ringColor = 'rgba(234, 179, 8, 0.7)'; // yellow
+              } else if (firstGroup.id === 'shadow-it') {
+                ringColor = 'rgba(239, 68, 68, 0.7)'; // red
+              }
+
+              const isHovered = groups.some(g => hoveredGroup === g.id);
+              const strokeWidth = isHovered 
+                ? (orbitPaths.hoverStrokeWidth ?? orbitPaths.strokeWidth ?? 3)
+                : (orbitPaths.strokeWidth ?? 2);
+              const opacity = isHovered
+                ? (orbitPaths.hoverOpacity ?? orbitPaths.opacity ?? 0.9)
+                : (orbitPaths.opacity ?? 0.7);
+
+              return (
+                <g key={`orbit-${radius}`}>
+                  <circle
+                    cx={centerX}
+                    cy={centerY}
+                    r={radius}
+                    fill="none"
+                    stroke={ringColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={orbitPaths.strokeDasharray === 'none' ? 'none' : (orbitPaths.strokeDasharray ?? '5,5')}
+                    opacity={opacity}
+                    style={{
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => handleGroupHover(firstGroup, e)}
+                    onMouseLeave={() => handleGroupHover(null)}
+                    onClick={() => onGroupSelect?.(firstGroup)}
+                  />
+                </g>
+              );
+            });
           }
 
-          const isHovered = hoveredGroup === group.id;
-          const strokeWidth = isHovered 
-            ? (orbitPaths.hoverStrokeWidth ?? orbitPaths.strokeWidth ?? 3)
-            : (orbitPaths.strokeWidth ?? 2);
-          const opacity = isHovered
-            ? (orbitPaths.hoverOpacity ?? orbitPaths.opacity ?? 0.9)
-            : (orbitPaths.opacity ?? 0.7);
+          // Default: one ring per group
+          return processedGroups.map((group) => {
+            // Determine ring color based on group type
+            let ringColor = colors.ring;
+            if (group.id === 'finance') {
+              ringColor = 'rgba(16, 185, 129, 0.7)'; // green - more visible
+            } else if (group.id === 'company-stack') {
+              ringColor = 'rgba(234, 179, 8, 0.7)'; // yellow - more visible
+            } else if (group.id === 'shadow-it') {
+              ringColor = 'rgba(239, 68, 68, 0.7)'; // red - more visible
+            }
 
-          return (
-            <g key={group.id}>
-              <circle
-                cx={centerX}
-                cy={centerY}
-                r={group.radius}
-                fill="none"
-                stroke={ringColor}
-                strokeWidth={strokeWidth}
-                strokeDasharray={orbitPaths.strokeDasharray === 'none' ? 'none' : (orbitPaths.strokeDasharray ?? '5,5')}
-                opacity={opacity}
-                style={{
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => handleGroupHover(group, e)}
-                onMouseLeave={() => handleGroupHover(null)}
-                onClick={() => onGroupSelect?.(group)}
-              />
-            </g>
-          );
-        })}
+            const isHovered = hoveredGroup === group.id;
+            const strokeWidth = isHovered 
+              ? (orbitPaths.hoverStrokeWidth ?? orbitPaths.strokeWidth ?? 3)
+              : (orbitPaths.strokeWidth ?? 2);
+            const opacity = isHovered
+              ? (orbitPaths.hoverOpacity ?? orbitPaths.opacity ?? 0.9)
+              : (orbitPaths.opacity ?? 0.7);
+
+            return (
+              <g key={group.id}>
+                <circle
+                  cx={centerX}
+                  cy={centerY}
+                  r={group.radius}
+                  fill="none"
+                  stroke={ringColor}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={orbitPaths.strokeDasharray === 'none' ? 'none' : (orbitPaths.strokeDasharray ?? '5,5')}
+                  opacity={opacity}
+                  style={{
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                  }}
+                  onMouseEnter={(e) => handleGroupHover(group, e)}
+                  onMouseLeave={() => handleGroupHover(null)}
+                  onClick={() => onGroupSelect?.(group)}
+                />
+              </g>
+            );
+          });
+        })()}
 
         {dialTicks.map((tick) => (
           <g key={tick.index}>
@@ -332,17 +511,20 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           </text>
         )}
 
-        {processedGroups.map((group, groupIndex) => (
-          <g
-            key={group.id}
-            style={{
-              animation:
-                animation.orbitRotation
-                  ? `rotate ${animation.orbitSpeedBase! * (groupIndex % 2 === 0 ? 1 : -1)}s linear infinite`
-                  : 'none',
-              transformOrigin: `${centerX}px ${centerY}px`,
-            }}
-          >
+        {processedGroups.map((group) => {
+          const orbitIndex = ('orbitIndex' in group ? group.orbitIndex : processedGroups.indexOf(group)) as number;
+          
+          return (
+            <g
+              key={group.id}
+              style={{
+                animation:
+                  animation.orbitRotation
+                    ? `rotate ${animation.orbitSpeedBase! * (orbitIndex % 2 === 0 ? 1 : -1)}s linear infinite`
+                    : 'none',
+                transformOrigin: `${centerX}px ${centerY}px`,
+              }}
+            >
             {group.sortedItems.map((item, itemIndex) => {
               const angle = group.angles[itemIndex];
               const pos = polarToCartesian(centerX, centerY, group.radius, angle);
@@ -387,7 +569,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                       isGroupHovered,
                       scale,
                       itemIndex,
-                      groupIndex,
+                      groupIndex: orbitIndex,
                       centerX,
                       centerY,
                       onMouseEnter: (e) => handleItemHover(item, e),
@@ -451,7 +633,8 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
               );
             })}
           </g>
-        ))}
+          );
+        })}
       </svg>
 
       {tooltip.visible && (

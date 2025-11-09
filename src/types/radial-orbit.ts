@@ -57,6 +57,7 @@ export type RadialOrbitProps = {
   onDialSelect?: (index: number) => void;
   renderItem?: (props: ItemRendererProps) => ReactNode;
   groupBy?: boolean;
+  groupOrbits?: string[][];
   orbitPaths?: {
     show?: boolean;
     strokeWidth?: number;

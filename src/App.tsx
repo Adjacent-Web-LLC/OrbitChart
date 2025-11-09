@@ -21,6 +21,7 @@ function App() {
     'shadow-it': true,
   });
   const [groupBy, setGroupBy] = useState(false);
+  const [groupOrbits, setGroupOrbits] = useState<string[][] | undefined>(undefined);
   const [orbitPaths, setOrbitPaths] = useState({
     show: true,
     strokeWidth: 2,
@@ -378,28 +379,341 @@ function App() {
           >
             Layout
           </h3>
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#cbd5e1',
-              fontSize: '12px',
-              cursor: 'pointer',
-              padding: '8px',
-              borderRadius: '6px',
-              backgroundColor: groupBy ? 'rgba(96, 165, 250, 0.1)' : 'transparent',
-              transition: 'background-color 0.2s',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={groupBy}
-              onChange={(e) => setGroupBy(e.target.checked)}
-              style={{ accentColor: '#60a5fa' }}
-            />
-            Group By Type
-          </label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#cbd5e1',
+                fontSize: '12px',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '6px',
+                backgroundColor: groupBy ? 'rgba(96, 165, 250, 0.1)' : 'transparent',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={groupBy}
+                onChange={(e) => setGroupBy(e.target.checked)}
+                style={{ accentColor: '#60a5fa' }}
+              />
+              Group By Type
+            </label>
+            <label
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#cbd5e1',
+                fontSize: '12px',
+                cursor: 'pointer',
+                padding: '8px',
+                borderRadius: '6px',
+                backgroundColor: groupOrbits !== undefined ? 'rgba(96, 165, 250, 0.1)' : 'transparent',
+                transition: 'background-color 0.2s',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={groupOrbits !== undefined}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    // Auto-assign all visible groups to separate orbits
+                    const visibleGroupIds = demoOrbitData.groups
+                      .filter(g => visibleGroups[g.id] !== false)
+                      .map(g => g.id);
+                    if (visibleGroupIds.length > 0) {
+                      setGroupOrbits(visibleGroupIds.map(id => [id]));
+                    } else {
+                      setGroupOrbits([[]]);
+                    }
+                  } else {
+                    setGroupOrbits(undefined);
+                  }
+                }}
+                style={{ accentColor: '#60a5fa' }}
+              />
+              Group Orbits
+            </label>
+            {groupOrbits !== undefined && (
+              <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'rgba(30, 41, 59, 0.5)', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                    Configure Orbits:
+                  </div>
+                  <button
+                    onClick={() => {
+                      setGroupOrbits([...groupOrbits, []]);
+                    }}
+                    style={{
+                      padding: '4px 8px',
+                      fontSize: '10px',
+                      backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                      border: '1px solid rgba(96, 165, 250, 0.3)',
+                      borderRadius: '4px',
+                      color: '#cbd5e1',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Add Orbit
+                  </button>
+                </div>
+                
+                {groupOrbits.map((orbit, orbitIndex) => {
+                  const availableGroups = demoOrbitData.groups
+                    .filter(g => visibleGroups[g.id] !== false)
+                    .map(g => g.id);
+                  const unassignedGroups = availableGroups.filter(
+                    groupId => !groupOrbits.some((o, idx) => idx !== orbitIndex && o.includes(groupId))
+                  );
+                  
+                  return (
+                    <div
+                      key={orbitIndex}
+                      style={{
+                        marginBottom: '8px',
+                        padding: '8px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(51, 65, 85, 0.5)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <div style={{ color: '#cbd5e1', fontSize: '11px', fontWeight: 600 }}>
+                          Orbit {orbitIndex + 1}
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {orbitIndex > 0 && (
+                            <button
+                              onClick={() => {
+                                const newOrbits = [...groupOrbits];
+                                [newOrbits[orbitIndex - 1], newOrbits[orbitIndex]] = [newOrbits[orbitIndex], newOrbits[orbitIndex - 1]];
+                                setGroupOrbits(newOrbits);
+                              }}
+                              style={{
+                                padding: '2px 6px',
+                                fontSize: '9px',
+                                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                                border: '1px solid rgba(96, 165, 250, 0.3)',
+                                borderRadius: '3px',
+                                color: '#cbd5e1',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ↑
+                            </button>
+                          )}
+                          {orbitIndex < groupOrbits.length - 1 && (
+                            <button
+                              onClick={() => {
+                                const newOrbits = [...groupOrbits];
+                                [newOrbits[orbitIndex], newOrbits[orbitIndex + 1]] = [newOrbits[orbitIndex + 1], newOrbits[orbitIndex]];
+                                setGroupOrbits(newOrbits);
+                              }}
+                              style={{
+                                padding: '2px 6px',
+                                fontSize: '9px',
+                                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                                border: '1px solid rgba(96, 165, 250, 0.3)',
+                                borderRadius: '3px',
+                                color: '#cbd5e1',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ↓
+                            </button>
+                          )}
+                          {groupOrbits.length > 1 && (
+                            <button
+                              onClick={() => {
+                                const newOrbits = groupOrbits.filter((_, idx) => idx !== orbitIndex);
+                                setGroupOrbits(newOrbits.length > 0 ? newOrbits : undefined);
+                              }}
+                              style={{
+                                padding: '2px 6px',
+                                fontSize: '9px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                                border: '1px solid rgba(239, 68, 68, 0.3)',
+                                borderRadius: '3px',
+                                color: '#cbd5e1',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Groups in this orbit */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                        {orbit.map((groupId, groupIdx) => {
+                          const group = demoOrbitData.groups.find(g => g.id === groupId);
+                          if (!group) return null;
+                          return (
+                            <div
+                              key={groupId}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '4px 6px',
+                                backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                color: '#cbd5e1',
+                              }}
+                            >
+                              <span>{group.label}</span>
+                              {orbit.length > 1 && groupIdx > 0 && (
+                                <button
+                                  onClick={() => {
+                                    const newOrbits = [...groupOrbits];
+                                    const newOrbit = [...orbit];
+                                    [newOrbit[groupIdx - 1], newOrbit[groupIdx]] = [newOrbit[groupIdx], newOrbit[groupIdx - 1]];
+                                    newOrbits[orbitIndex] = newOrbit;
+                                    setGroupOrbits(newOrbits);
+                                  }}
+                                  style={{
+                                    padding: '1px 3px',
+                                    fontSize: '8px',
+                                    backgroundColor: 'rgba(96, 165, 250, 0.3)',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    color: '#cbd5e1',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  ←
+                                </button>
+                              )}
+                              {orbit.length > 1 && groupIdx < orbit.length - 1 && (
+                                <button
+                                  onClick={() => {
+                                    const newOrbits = [...groupOrbits];
+                                    const newOrbit = [...orbit];
+                                    [newOrbit[groupIdx], newOrbit[groupIdx + 1]] = [newOrbit[groupIdx + 1], newOrbit[groupIdx]];
+                                    newOrbits[orbitIndex] = newOrbit;
+                                    setGroupOrbits(newOrbits);
+                                  }}
+                                  style={{
+                                    padding: '1px 3px',
+                                    fontSize: '8px',
+                                    backgroundColor: 'rgba(96, 165, 250, 0.3)',
+                                    border: 'none',
+                                    borderRadius: '2px',
+                                    color: '#cbd5e1',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  →
+                                </button>
+                              )}
+                              <button
+                                onClick={() => {
+                                  const newOrbits = [...groupOrbits];
+                                  newOrbits[orbitIndex] = orbit.filter(id => id !== groupId);
+                                  setGroupOrbits(newOrbits);
+                                }}
+                                style={{
+                                  padding: '1px 4px',
+                                  fontSize: '9px',
+                                  backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                                  border: 'none',
+                                  borderRadius: '2px',
+                                  color: '#cbd5e1',
+                                  cursor: 'pointer',
+                                  marginLeft: '2px',
+                                }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Add groups to this orbit */}
+                      {unassignedGroups.length > 0 && (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              const newOrbits = [...groupOrbits];
+                              newOrbits[orbitIndex] = [...orbit, e.target.value];
+                              setGroupOrbits(newOrbits);
+                              e.target.value = '';
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '4px 6px',
+                            fontSize: '10px',
+                            backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                            border: '1px solid rgba(51, 65, 85, 1)',
+                            borderRadius: '4px',
+                            color: '#cbd5e1',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="">+ Add group to orbit...</option>
+                          {unassignedGroups.map(groupId => {
+                            const group = demoOrbitData.groups.find(g => g.id === groupId);
+                            return group ? (
+                              <option key={groupId} value={groupId}>
+                                {group.label}
+                              </option>
+                            ) : null;
+                          })}
+                        </select>
+                      )}
+                    </div>
+                  );
+                })}
+                
+                {/* Unassigned groups */}
+                {(() => {
+                  const assignedGroups = new Set(groupOrbits.flat());
+                  const unassignedGroups = demoOrbitData.groups
+                    .filter(g => visibleGroups[g.id] !== false && !assignedGroups.has(g.id))
+                    .map(g => g.id);
+                  
+                  if (unassignedGroups.length === 0) return null;
+                  
+                  return (
+                    <div style={{ marginTop: '8px', padding: '8px', backgroundColor: 'rgba(15, 23, 42, 0.4)', borderRadius: '4px' }}>
+                      <div style={{ color: '#94a3b8', fontSize: '10px', marginBottom: '6px' }}>
+                        Unassigned Groups:
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {unassignedGroups.map(groupId => {
+                          const group = demoOrbitData.groups.find(g => g.id === groupId);
+                          if (!group) return null;
+                          return (
+                            <div
+                              key={groupId}
+                              style={{
+                                padding: '4px 6px',
+                                backgroundColor: 'rgba(100, 116, 139, 0.2)',
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                color: '#94a3b8',
+                              }}
+                            >
+                              {group.label}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Orbit Paths Controls */}
@@ -620,25 +934,26 @@ function App() {
             minHeight: chartSize.height + 40,
           }}
         >
-          <RadialOrbit
+        <RadialOrbit
             data={filteredData}
             width={chartSize.width}
             height={chartSize.height}
-            sortableBy="value"
-            onGroupSelect={handleGroupSelect}
-            onItemSelect={handleItemSelect}
-            onDialSelect={handleDialSelect}
+          sortableBy="value"
+          onGroupSelect={handleGroupSelect}
+          onItemSelect={handleItemSelect}
+          onDialSelect={handleDialSelect}
             animation={animation}
             groupBy={groupBy}
+            groupOrbits={groupOrbits}
             orbitPaths={orbitPaths}
-            colors={{
-              background: 'transparent',
-              ring: 'rgba(100, 116, 139, 0.3)',
-              center: '#1e293b',
-              tooltip: 'rgba(15, 23, 42, 0.95)',
-            }}
-          />
-        </div>
+          colors={{
+            background: 'transparent',
+            ring: 'rgba(100, 116, 139, 0.3)',
+            center: '#1e293b',
+            tooltip: 'rgba(15, 23, 42, 0.95)',
+          }}
+        />
+      </div>
 
         {/* Second Demo - Custom Renderer */}
         <div
@@ -674,6 +989,7 @@ function App() {
             renderItem={customItemRenderer}
             animation={animation}
             groupBy={groupBy}
+            groupOrbits={groupOrbits}
             orbitPaths={orbitPaths}
             colors={{
               background: 'transparent',
@@ -710,9 +1026,9 @@ function App() {
             >
               <span style={{ color: '#94a3b8' }}>Selected Group:</span>{' '}
               <span style={{ color: 'white', fontWeight: 600 }}>{selectedGroup}</span>
-            </div>
-          )}
-          {selectedItem && (
+          </div>
+        )}
+        {selectedItem && (
             <div
               style={{
                 backgroundColor: 'rgba(30, 41, 59, 0.9)',
@@ -724,9 +1040,9 @@ function App() {
             >
               <span style={{ color: '#94a3b8' }}>Selected Item:</span>{' '}
               <span style={{ color: 'white', fontWeight: 600 }}>{selectedItem}</span>
-            </div>
-          )}
-          {selectedDial !== null && (
+          </div>
+        )}
+        {selectedDial !== null && (
             <div
               style={{
                 backgroundColor: 'rgba(30, 41, 59, 0.9)',
@@ -738,9 +1054,9 @@ function App() {
             >
               <span style={{ color: '#94a3b8' }}>Selected Dial:</span>{' '}
               <span style={{ color: 'white', fontWeight: 600 }}>{selectedDial}</span>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
       )}
     </div>
   );

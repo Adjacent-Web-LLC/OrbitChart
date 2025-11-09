@@ -24,10 +24,16 @@ function App() {
   
   // Control states
   const [chartSize, setChartSize] = useState({ width: 800, height: 800 });
-  const [animation, setAnimation] = useState({
+  const [animation, setAnimation] = useState<{
+    orbitRotation: boolean;
+    orbitSpeedBase: number;
+    hoverScale: number;
+    orbits?: string[];
+  }>({
     orbitRotation: true,
     orbitSpeedBase: 80,
     hoverScale: 1.15,
+    orbits: undefined, // undefined = animate all, [] = animate none, [ids] = animate selected
   });
   
   // Initialize visibleGroups based on current data set
@@ -380,6 +386,99 @@ function App() {
                 }}
               />
             </div>
+            {animation.orbitRotation && (
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    color: '#cbd5e1',
+                    fontSize: '12px',
+                    marginBottom: '8px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  Animate Orbits
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {currentData.groups.map((group) => (
+                    <label
+                      key={group.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        color: '#cbd5e1',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        padding: '4px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: (animation.orbits === undefined || (animation.orbits && animation.orbits.includes(group.id)))
+                          ? 'rgba(96, 165, 250, 0.2)'
+                          : 'transparent',
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={animation.orbits === undefined || (animation.orbits && animation.orbits.includes(group.id))}
+                        onChange={(e) => {
+                          if (animation.orbits === undefined) {
+                            // If undefined, initialize with all groups except this one (if unchecking) or all groups (if checking)
+                            const allGroupIds = currentData.groups.map(g => g.id);
+                            if (e.target.checked) {
+                              setAnimation({
+                                ...animation,
+                                orbits: allGroupIds,
+                              });
+                            } else {
+                              setAnimation({
+                                ...animation,
+                                orbits: allGroupIds.filter(id => id !== group.id),
+                              });
+                            }
+                          } else {
+                            const currentOrbits = animation.orbits;
+                            if (e.target.checked) {
+                              setAnimation({
+                                ...animation,
+                                orbits: [...currentOrbits, group.id],
+                              });
+                            } else {
+                              const newOrbits = currentOrbits.filter(id => id !== group.id);
+                              setAnimation({
+                                ...animation,
+                                orbits: newOrbits.length === 0 ? undefined : newOrbits,
+                              });
+                            }
+                          }
+                        }}
+                        style={{ accentColor: '#60a5fa' }}
+                      />
+                      {group.label}
+                    </label>
+                  ))}
+                  {animation.orbits !== undefined && (
+                    <button
+                      onClick={() => setAnimation({ ...animation, orbits: undefined })}
+                      style={{
+                        marginTop: '4px',
+                        padding: '4px 8px',
+                        fontSize: '10px',
+                        backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                        border: '1px solid rgba(96, 165, 250, 0.3)',
+                        borderRadius: '4px',
+                        color: '#cbd5e1',
+                        cursor: 'pointer',
+                        width: '100%',
+                      }}
+                    >
+                      Clear Selection (Animate All)
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

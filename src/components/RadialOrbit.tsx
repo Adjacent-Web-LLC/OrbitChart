@@ -511,134 +511,157 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           </text>
         )}
 
-        {processedGroups.map((group) => {
-          const orbitIndex = ('orbitIndex' in group ? group.orbitIndex : processedGroups.indexOf(group)) as number;
-          
-          // Check if any item in this group is hovered
-          const hasHoveredItem = group.sortedItems.some(item => hoveredItem === item.id);
-          
-          return (
-            <g
-              key={group.id}
-              style={{
-                animation:
-                  animation.orbitRotation
-                    ? `rotate ${animation.orbitSpeedBase! * (orbitIndex % 2 === 0 ? 1 : -1)}s linear infinite`
-                    : 'none',
-                animationPlayState: animation.orbitRotation && hasHoveredItem ? 'paused' : (animation.orbitRotation ? 'running' : 'paused'),
-                transformOrigin: `${centerX}px ${centerY}px`,
-              }}
-            >
-            {group.sortedItems.map((item, itemIndex) => {
-              const angle = group.angles[itemIndex];
-              const pos = polarToCartesian(centerX, centerY, group.radius, angle);
-              
-              // Scale item radius based on container size
-              const minItemRadius = 8 * scaleFactor;
-              const maxItemRadius = 32 * scaleFactor;
-              const itemRadius = valueToRadius(
-                item.value,
-                group.minValue,
-                group.maxValue,
-                minItemRadius,
-                maxItemRadius
-              );
-              
-              const isHovered = hoveredItem === item.id;
-              const isGroupHovered = hoveredGroup === group.id;
-              const scale =
-                isHovered || isGroupHovered ? animation.hoverScale || 1.1 : 1;
+        {(() => {
+          // Group by orbit (radius) to handle shared orbits
+          const groupsByOrbit = new Map<number, Array<typeof processedGroups[0]>>();
+          processedGroups.forEach((group) => {
+            const radius = group.radius;
+            if (!groupsByOrbit.has(radius)) {
+              groupsByOrbit.set(radius, []);
+            }
+            groupsByOrbit.get(radius)!.push(group);
+          });
 
-              if (renderItem) {
-                return (
-                <foreignObject
-                    key={item.id}
-                    x={pos.x - itemRadius * 0.55}
-                    y={pos.y - itemRadius * 0.55}
-                    width={itemRadius * 1.1}
-                    height={itemRadius * 1.1}
-                    style={{
-                      animation: 'fadeIn 0.5s ease-out',
-                      animationDelay: `${itemIndex * 0.05}s`,
-                      animationFillMode: 'backwards',
-                    }}
-                >
-                    {renderItem({
-                      item,
-                      group,
-                      position: pos,
-                      radius: itemRadius,
-                      angle,
-                      isHovered,
-                      isGroupHovered,
-                      scale,
-                      itemIndex,
-                      groupIndex: orbitIndex,
-                      centerX,
-                      centerY,
-                      onMouseEnter: (e) => handleItemHover(item, e),
-                      onMouseLeave: () => handleItemHover(null),
-                      onClick: () => onItemSelect?.(item, group),
+          return Array.from(groupsByOrbit.entries()).map(([radius, groupsInOrbit]) => {
+            const firstGroup = groupsInOrbit[0];
+            const orbitIndex = ('orbitIndex' in firstGroup ? firstGroup.orbitIndex : processedGroups.indexOf(firstGroup)) as number;
+            
+            // Check if any item in any group in this orbit is hovered
+            const hasHoveredItem = groupsInOrbit.some(g => g.sortedItems.some(item => hoveredItem === item.id));
+            
+            // Check if this orbit should animate - check if ANY group in this orbit is selected
+            // If animation.orbits is undefined, animate all. If it's an array (even empty), only animate selected ones.
+            const shouldAnimate = animation.orbitRotation && 
+              (animation.orbits === undefined || 
+               (animation.orbits.length > 0 && groupsInOrbit.some(g => animation.orbits!.includes(g.id))));
+            
+            return (
+              <g
+                key={`orbit-${radius}`}
+                style={{
+                  animation:
+                    shouldAnimate
+                      ? `rotate ${animation.orbitSpeedBase! * (orbitIndex % 2 === 0 ? 1 : -1)}s linear infinite`
+                      : 'none',
+                  animationPlayState: shouldAnimate && hasHoveredItem ? 'paused' : (shouldAnimate ? 'running' : 'paused'),
+                  transformOrigin: `${centerX}px ${centerY}px`,
+                }}
+              >
+                {groupsInOrbit.map((group) => (
+                  <g key={group.id}>
+                    {group.sortedItems.map((item, itemIndex) => {
+                      const angle = group.angles[itemIndex];
+                      const pos = polarToCartesian(centerX, centerY, group.radius, angle);
+                      
+                      // Scale item radius based on container size
+                      const minItemRadius = 8 * scaleFactor;
+                      const maxItemRadius = 32 * scaleFactor;
+                      const itemRadius = valueToRadius(
+                        item.value,
+                        group.minValue,
+                        group.maxValue,
+                        minItemRadius,
+                        maxItemRadius
+                      );
+                      
+                      const isHovered = hoveredItem === item.id;
+                      const isGroupHovered = hoveredGroup === group.id;
+                      const scale =
+                        isHovered || isGroupHovered ? animation.hoverScale || 1.1 : 1;
+
+                      if (renderItem) {
+                        return (
+                        <foreignObject
+                            key={item.id}
+                            x={pos.x - itemRadius * 0.55}
+                            y={pos.y - itemRadius * 0.55}
+                            width={itemRadius * 1.1}
+                            height={itemRadius * 1.1}
+                            style={{
+                              animation: 'fadeIn 0.5s ease-out',
+                              animationDelay: `${itemIndex * 0.05}s`,
+                              animationFillMode: 'backwards',
+                            }}
+                        >
+                            {renderItem({
+                              item,
+                              group,
+                              position: pos,
+                              radius: itemRadius,
+                              angle,
+                              isHovered,
+                              isGroupHovered,
+                              scale,
+                              itemIndex,
+                              groupIndex: orbitIndex,
+                              centerX,
+                              centerY,
+                              onMouseEnter: (e) => handleItemHover(item, e),
+                              onMouseLeave: () => handleItemHover(null),
+                              onClick: () => onItemSelect?.(item, group),
+                            })}
+                          </foreignObject>
+                        );
+                      }
+
+                      return (
+                        <g
+                          key={item.id}
+                          style={{
+                            animation: 'fadeIn 0.5s ease-out',
+                            animationDelay: `${itemIndex * 0.05}s`,
+                            animationFillMode: 'backwards',
+                          }}
+                        >
+                          <circle
+                            cx={pos.x}
+                            cy={pos.y}
+                            r={itemRadius * scale}
+                            fill={item.color || group.color || '#60a5fa'}
+                            stroke="rgba(255, 255, 255, 0.3)"
+                            strokeWidth="2"
+                            filter={item.glow ? 'url(#glow)' : 'none'}
+                            style={{
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              opacity: isHovered ? 1 : 0.85,
+                            }}
+                            onMouseEnter={(e) => handleItemHover(item, e)}
+                            onMouseLeave={() => handleItemHover(null)}
+                            onClick={() => onItemSelect?.(item, group)}
+                          />
+                          {item.iconUrl && (
+                            <image
+                              href={item.iconUrl}
+                              x={pos.x - itemRadius * 0.55}
+                              y={pos.y - itemRadius * 0.55}
+                              width={itemRadius * 1.1}
+                              height={itemRadius * 1.1}
+                              style={{ pointerEvents: 'none' }}
+                            />
+                          )}
+                          {isHovered && (
+                            <text
+                              x={pos.x}
+                              y={pos.y + itemRadius + 15 * scaleFactor}
+                              textAnchor="middle"
+                              fill="white"
+                              fontSize={11 * scaleFactor}
+                              fontWeight="500"
+                              style={{ pointerEvents: 'none' }}
+                            >
+                              {item.label}
+                            </text>
+                          )}
+                        </g>
+                      );
                     })}
-                  </foreignObject>
-                );
-              }
-
-              return (
-                <g
-                  key={item.id}
-                  style={{
-                    animation: 'fadeIn 0.5s ease-out',
-                    animationDelay: `${itemIndex * 0.05}s`,
-                    animationFillMode: 'backwards',
-                  }}
-                >
-                  <circle
-                    cx={pos.x}
-                    cy={pos.y}
-                    r={itemRadius * scale}
-                    fill={item.color || group.color || '#60a5fa'}
-                    stroke="rgba(255, 255, 255, 0.3)"
-                    strokeWidth="2"
-                    filter={item.glow ? 'url(#glow)' : 'none'}
-                    style={{
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      opacity: isHovered ? 1 : 0.85,
-                    }}
-                    onMouseEnter={(e) => handleItemHover(item, e)}
-                    onMouseLeave={() => handleItemHover(null)}
-                    onClick={() => onItemSelect?.(item, group)}
-                  />
-                  {item.iconUrl && (
-                    <image
-                      href={item.iconUrl}
-                      x={pos.x - itemRadius * 0.55}
-                      y={pos.y - itemRadius * 0.55}
-                      width={itemRadius * 1.1}
-                      height={itemRadius * 1.1}
-                      style={{ pointerEvents: 'none' }}
-                    />
-                  )}
-                  {isHovered && (
-                    <text
-                      x={pos.x}
-                      y={pos.y + itemRadius + 15 * scaleFactor}
-                      textAnchor="middle"
-                      fill="white"
-                      fontSize={11 * scaleFactor}
-                      fontWeight="500"
-                      style={{ pointerEvents: 'none' }}
-                    >
-                      {item.label}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </g>
-          );
-        })}
+                  </g>
+                ))}
+              </g>
+            );
+          });
+        })()}
       </svg>
 
       {tooltip.visible && (

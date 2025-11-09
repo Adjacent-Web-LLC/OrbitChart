@@ -70,6 +70,7 @@ export type RadialOrbitProps = {
     orbitRotation?: boolean;
     orbitSpeedBase?: number;
     hoverScale?: number;
+    orbits?: string[];
   };
   colors?: {
     background?: string;

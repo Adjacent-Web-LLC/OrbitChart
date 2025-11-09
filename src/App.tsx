@@ -3,12 +3,14 @@ import RadialOrbit from './components/RadialOrbit';
 import { demoOrbitData } from './data/demo-orbit-data';
 import { userApplicationsData } from './data/user-applications-data';
 import { teamCollaborationData } from './data/team-collaboration-data';
+import { companySpendData } from './data/company-spend-data';
 import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps, RadialOrbitData } from './types/radial-orbit';
 
 const demoDataSets = {
   'enterprise': { label: 'Enterprise Stack', data: demoOrbitData },
   'user-apps': { label: 'User Applications', data: userApplicationsData },
   'team-collab': { label: 'Team Collaboration', data: teamCollaborationData },
+  'company-spend': { label: 'Company Spend', data: companySpendData },
 } as const;
 
 type DemoDataSetKey = keyof typeof demoDataSets;

@@ -1,12 +1,26 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import RadialOrbit from './components/RadialOrbit';
 import { demoOrbitData } from './data/demo-orbit-data';
-import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps } from './types/radial-orbit';
+import { userApplicationsData } from './data/user-applications-data';
+import { teamCollaborationData } from './data/team-collaboration-data';
+import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps, RadialOrbitData } from './types/radial-orbit';
+
+const demoDataSets = {
+  'enterprise': { label: 'Enterprise Stack', data: demoOrbitData },
+  'user-apps': { label: 'User Applications', data: userApplicationsData },
+  'team-collab': { label: 'Team Collaboration', data: teamCollaborationData },
+} as const;
+
+type DemoDataSetKey = keyof typeof demoDataSets;
 
 function App() {
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [selectedDial, setSelectedDial] = useState<number | null>(null);
+  const [selectedDataSet, setSelectedDataSet] = useState<DemoDataSetKey>('enterprise');
+  
+  // Get current data set
+  const currentData = demoDataSets[selectedDataSet].data;
   
   // Control states
   const [chartSize, setChartSize] = useState({ width: 800, height: 800 });
@@ -15,11 +29,16 @@ function App() {
     orbitSpeedBase: 80,
     hoverScale: 1.15,
   });
-  const [visibleGroups, setVisibleGroups] = useState<Record<string, boolean>>({
-    finance: true,
-    'company-stack': true,
-    'shadow-it': true,
+  
+  // Initialize visibleGroups based on current data set
+  const [visibleGroups, setVisibleGroups] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    currentData.groups.forEach(group => {
+      initial[group.id] = true;
+    });
+    return initial;
   });
+  
   const [groupBy, setGroupBy] = useState(false);
   const [groupOrbits, setGroupOrbits] = useState<string[][] | undefined>(undefined);
   const [orbitPaths, setOrbitPaths] = useState({
@@ -30,6 +49,15 @@ function App() {
     hoverStrokeWidth: 3,
     hoverOpacity: 0.9,
   });
+  
+  // Update visibleGroups when data set changes
+  useEffect(() => {
+    const newVisibleGroups: Record<string, boolean> = {};
+    currentData.groups.forEach(group => {
+      newVisibleGroups[group.id] = true;
+    });
+    setVisibleGroups(newVisibleGroups);
+  }, [selectedDataSet]);
 
   const handleGroupSelect = (group: RadialOrbitGroup) => {
     setSelectedGroup(group.id);
@@ -101,10 +129,10 @@ function App() {
   };
 
   // Filter groups based on visibility
-  const filteredData = {
-    ...demoOrbitData,
-    groups: demoOrbitData.groups.filter(group => visibleGroups[group.id] !== false),
-  };
+  const filteredData = useMemo(() => ({
+    ...currentData,
+    groups: currentData.groups.filter(group => visibleGroups[group.id] !== false),
+  }), [currentData, visibleGroups]);
 
   return (
     <div
@@ -148,6 +176,46 @@ function App() {
         >
           Chart Controls
         </h2>
+
+        {/* Demo Data Selector */}
+        <div style={{ marginBottom: '32px' }}>
+          <label
+            style={{
+              display: 'block',
+              color: '#94a3b8',
+              fontSize: '14px',
+              fontWeight: 600,
+              marginBottom: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Demo Data
+          </label>
+          <select
+            value={selectedDataSet}
+            onChange={(e) => {
+              setSelectedDataSet(e.target.value as DemoDataSetKey);
+              setGroupOrbits(undefined);
+            }}
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(30, 41, 59, 0.8)',
+              border: '1px solid rgba(51, 65, 85, 1)',
+              color: '#cbd5e1',
+              fontSize: '13px',
+              cursor: 'pointer',
+            }}
+          >
+            {Object.entries(demoDataSets).map(([key, { label }]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {/* Size Controls */}
         <div style={{ marginBottom: '32px' }}>
@@ -330,7 +398,7 @@ function App() {
             Filter Types
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {demoOrbitData.groups.map((group) => (
+            {currentData.groups.map((group) => (
               <label
                 key={group.id}
                 style={{
@@ -422,7 +490,7 @@ function App() {
                 onChange={(e) => {
                   if (e.target.checked) {
                     // Auto-assign all visible groups to separate orbits
-                    const visibleGroupIds = demoOrbitData.groups
+                    const visibleGroupIds = currentData.groups
                       .filter(g => visibleGroups[g.id] !== false)
                       .map(g => g.id);
                     if (visibleGroupIds.length > 0) {
@@ -463,7 +531,7 @@ function App() {
                 </div>
                 
                 {groupOrbits.map((orbit, orbitIndex) => {
-                  const availableGroups = demoOrbitData.groups
+                  const availableGroups = currentData.groups
                     .filter(g => visibleGroups[g.id] !== false)
                     .map(g => g.id);
                   const unassignedGroups = availableGroups.filter(
@@ -551,7 +619,7 @@ function App() {
                       {/* Groups in this orbit */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                         {orbit.map((groupId, groupIdx) => {
-                          const group = demoOrbitData.groups.find(g => g.id === groupId);
+                          const group = currentData.groups.find(g => g.id === groupId);
                           if (!group) return null;
                           return (
                             <div
@@ -661,7 +729,7 @@ function App() {
                         >
                           <option value="">+ Add group to orbit...</option>
                           {unassignedGroups.map(groupId => {
-                            const group = demoOrbitData.groups.find(g => g.id === groupId);
+                            const group = currentData.groups.find(g => g.id === groupId);
                             return group ? (
                               <option key={groupId} value={groupId}>
                                 {group.label}
@@ -677,7 +745,7 @@ function App() {
                 {/* Unassigned groups */}
                 {(() => {
                   const assignedGroups = new Set(groupOrbits.flat());
-                  const unassignedGroups = demoOrbitData.groups
+                  const unassignedGroups = currentData.groups
                     .filter(g => visibleGroups[g.id] !== false && !assignedGroups.has(g.id))
                     .map(g => g.id);
                   
@@ -690,7 +758,7 @@ function App() {
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                         {unassignedGroups.map(groupId => {
-                          const group = demoOrbitData.groups.find(g => g.id === groupId);
+                          const group = currentData.groups.find(g => g.id === groupId);
                           if (!group) return null;
                           return (
                             <div
@@ -1014,7 +1082,7 @@ function App() {
             zIndex: 1001,
           }}
         >
-          {selectedGroup && (
+        {selectedGroup && (
             <div
               style={{
                 backgroundColor: 'rgba(30, 41, 59, 0.9)',

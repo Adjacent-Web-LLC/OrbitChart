@@ -1,0 +1,132 @@
+import { type RadialOrbitData } from '../types/radial-orbit';
+
+export const teamCollaborationData: RadialOrbitData = {
+  center: {
+    id: 'engineering-team',
+    label: 'Engineering',
+    subtitle: 'Product Team',
+    avatarUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=Engineering',
+  },
+  groups: [
+    {
+      id: 'core-tools',
+      label: 'Core Tools',
+      color: '#10b981',
+      items: [
+        {
+          id: 'github-team',
+          label: 'GitHub',
+          value: 100,
+          color: '#10b981',
+          glow: true,
+          iconUrl: 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png',
+          meta: { teamSize: 25, repos: 120 },
+        },
+        {
+          id: 'slack-team',
+          label: 'Slack',
+          value: 98,
+          color: '#10b981',
+          glow: true,
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Slack_Technologies_Logo.svg/1200px-Slack_Technologies_Logo.svg.png',
+          meta: { teamSize: 25, channels: 45 },
+        },
+        {
+          id: 'jira-team',
+          label: 'Jira',
+          value: 95,
+          color: '#10b981',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/82/Atlassian_Jira_Logo.svg/1200px-Atlassian_Jira_Logo.svg.png',
+          meta: { teamSize: 25, projects: 15 },
+        },
+        {
+          id: 'confluence',
+          label: 'Confluence',
+          value: 88,
+          color: '#10b981',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Atlassian_Confluence_logo.svg/1200px-Atlassian_Confluence_logo.svg.png',
+          meta: { teamSize: 25, pages: 320 },
+        },
+      ],
+    },
+    {
+      id: 'development',
+      label: 'Development',
+      color: '#eab308',
+      items: [
+        {
+          id: 'vscode-team',
+          label: 'VS Code',
+          value: 92,
+          color: '#eab308',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9a/Visual_Studio_Code_1.35_icon.svg/1200px-Visual_Studio_Code_1.35_icon.svg.png',
+          meta: { teamSize: 20, extensions: 150 },
+        },
+        {
+          id: 'docker',
+          label: 'Docker',
+          value: 85,
+          color: '#eab308',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Docker_%28container_engine%29_logo.svg/1200px-Docker_%28container_engine%29_logo.svg.png',
+          meta: { teamSize: 18, containers: 85 },
+        },
+        {
+          id: 'kubernetes',
+          label: 'Kubernetes',
+          value: 78,
+          color: '#eab308',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Kubernetes_logo_without_workmark.svg/1200px-Kubernetes_logo_without_workmark.svg.png',
+          meta: { teamSize: 12, clusters: 8 },
+        },
+        {
+          id: 'terraform',
+          label: 'Terraform',
+          value: 72,
+          color: '#eab308',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/04/Terraform_Logo.svg/1200px-Terraform_Logo.svg.png',
+          meta: { teamSize: 15, modules: 45 },
+        },
+      ],
+    },
+    {
+      id: 'monitoring',
+      label: 'Monitoring & Analytics',
+      color: '#ef4444',
+      items: [
+        {
+          id: 'datadog-team',
+          label: 'Datadog',
+          value: 88,
+          color: '#ef4444',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Datadog_logo.svg/1200px-Datadog_logo.svg.png',
+          meta: { teamSize: 10, dashboards: 25 },
+        },
+        {
+          id: 'sentry',
+          label: 'Sentry',
+          value: 82,
+          color: '#ef4444',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8a/Sentry-logo.svg/1200px-Sentry-logo.svg.png',
+          meta: { teamSize: 8, projects: 18 },
+        },
+        {
+          id: 'newrelic',
+          label: 'New Relic',
+          value: 75,
+          color: '#ef4444',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/New_Relic_logo.svg/1200px-New_Relic_logo.svg.png',
+          meta: { teamSize: 6, apps: 30 },
+        },
+        {
+          id: 'grafana',
+          label: 'Grafana',
+          value: 70,
+          color: '#ef4444',
+          iconUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Grafana_logo.svg/1200px-Grafana_logo.svg.png',
+          meta: { teamSize: 5, dashboards: 40 },
+        },
+      ],
+    },
+  ],
+};
+

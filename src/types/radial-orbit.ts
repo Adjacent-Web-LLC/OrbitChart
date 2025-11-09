@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode, MouseEvent } from 'react';
 
 export type RadialOrbitItem = {
   id: string;
@@ -29,6 +29,24 @@ export type RadialOrbitData = {
   groups: RadialOrbitGroup[];
 };
 
+export type ItemRendererProps = {
+  item: RadialOrbitItem;
+  group: RadialOrbitGroup;
+  position: { x: number; y: number };
+  radius: number;
+  angle: number;
+  isHovered: boolean;
+  isGroupHovered: boolean;
+  scale: number;
+  itemIndex: number;
+  groupIndex: number;
+  centerX: number;
+  centerY: number;
+  onMouseEnter: (e: MouseEvent<SVGElement>) => void;
+  onMouseLeave: () => void;
+  onClick: () => void;
+};
+
 export type RadialOrbitProps = {
   data: RadialOrbitData;
   width?: number;
@@ -37,6 +55,7 @@ export type RadialOrbitProps = {
   onGroupSelect?: (group: RadialOrbitGroup) => void;
   onItemSelect?: (item: RadialOrbitItem, group: RadialOrbitGroup) => void;
   onDialSelect?: (index: number) => void;
+  renderItem?: (props: ItemRendererProps) => ReactNode;
   animation?: {
     orbitRotation?: boolean;
     orbitSpeedBase?: number;

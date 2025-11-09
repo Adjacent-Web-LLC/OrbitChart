@@ -26,6 +26,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
   onGroupSelect,
   onItemSelect,
   onDialSelect,
+  renderItem,
   animation = {
     orbitRotation: true,
     orbitSpeedBase: 60,
@@ -51,15 +52,33 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
 
   const centerX = width / 2;
   const centerY = height / 2;
-  const centerRadius = 60;
-  const dialRadius = centerRadius + 40;
-  const baseOrbitRadius = dialRadius + 60;
-  const orbitSpacing = 120;
+  
+  // Calculate scale factor based on container size (using minimum dimension for square aspect ratio)
+  const minDimension = Math.min(width, height);
+  const scaleFactor = minDimension / 800; // Base size is 800px
+  
+  // Dynamic sizes that scale with container
+  const centerRadius = 60 * scaleFactor;
+  const dialRadius = centerRadius + 40 * scaleFactor;
+  const baseOrbitRadius = dialRadius + 60 * scaleFactor;
+  const orbitSpacing = 120 * scaleFactor;
+  
+  // Calculate maximum available radius (leave padding for items)
+  const maxAvailableRadius = Math.min(width, height) / 2 - 50 * scaleFactor;
 
   const processedGroups = useMemo(() => {
-    return data.groups.map((group, index) => {
+    const groups = data.groups.map((group, index) => {
       const sortedItems = sortItems(group.items, sortableBy);
-      const radius = group.radius || baseOrbitRadius + index * orbitSpacing;
+      
+      // Calculate orbit radius, ensuring it fits within container
+      let radius = group.radius || baseOrbitRadius + index * orbitSpacing;
+      
+      // If radius exceeds available space, scale it down
+      if (radius > maxAvailableRadius) {
+        // Distribute available space among groups
+        const availableForOrbits = maxAvailableRadius - baseOrbitRadius;
+        radius = baseOrbitRadius + (availableForOrbits / data.groups.length) * (index + 1);
+      }
 
       const allValues = sortedItems.map((item) => item.value);
       const minValue = Math.min(...allValues);
@@ -76,7 +95,9 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         angles,
       };
     });
-  }, [data.groups, sortableBy, baseOrbitRadius, orbitSpacing]);
+    
+    return groups;
+  }, [data.groups, sortableBy, baseOrbitRadius, orbitSpacing, maxAvailableRadius]);
 
   const handleGroupHover = (
     group: RadialOrbitGroup | null,
@@ -154,6 +175,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         width,
         height,
         background: colors.background,
+        overflow: 'hidden',
         ...style,
       }}
     >
@@ -166,8 +188,9 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          overflow: 'visible',
+          overflow: 'hidden',
         }}
+        viewBox={`0 0 ${width} ${height}`}
       >
         <defs>
           <filter id="glow">
@@ -257,7 +280,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           textAnchor="middle"
           dominantBaseline="middle"
           fill="white"
-          fontSize="16"
+          fontSize={16 * scaleFactor}
           fontWeight="bold"
         >
           {data.center.label}
@@ -265,11 +288,11 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         {data.center.subtitle && (
           <text
             x={centerX}
-            y={centerY + 20}
+            y={centerY + 20 * scaleFactor}
             textAnchor="middle"
             dominantBaseline="middle"
             fill="white"
-            fontSize="10"
+            fontSize={10 * scaleFactor}
             opacity="0.7"
           >
             {data.center.subtitle}
@@ -290,15 +313,53 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
             {group.sortedItems.map((item, itemIndex) => {
               const angle = group.angles[itemIndex];
               const pos = polarToCartesian(centerX, centerY, group.radius, angle);
+              
+              // Scale item radius based on container size
+              const minItemRadius = 8 * scaleFactor;
+              const maxItemRadius = 32 * scaleFactor;
               const itemRadius = valueToRadius(
                 item.value,
                 group.minValue,
-                group.maxValue
+                group.maxValue,
+                minItemRadius,
+                maxItemRadius
               );
+              
               const isHovered = hoveredItem === item.id;
               const isGroupHovered = hoveredGroup === group.id;
               const scale =
                 isHovered || isGroupHovered ? animation.hoverScale || 1.1 : 1;
+
+              if (renderItem) {
+                return (
+                  <g
+                    key={item.id}
+                    style={{
+                      animation: 'fadeIn 0.5s ease-out',
+                      animationDelay: `${itemIndex * 0.05}s`,
+                      animationFillMode: 'backwards',
+                    }}
+                  >
+                    {renderItem({
+                      item,
+                      group,
+                      position: pos,
+                      radius: itemRadius,
+                      angle,
+                      isHovered,
+                      isGroupHovered,
+                      scale,
+                      itemIndex,
+                      groupIndex,
+                      centerX,
+                      centerY,
+                      onMouseEnter: (e) => handleItemHover(item, e),
+                      onMouseLeave: () => handleItemHover(null),
+                      onClick: () => onItemSelect?.(item, group),
+                    })}
+                  </g>
+                );
+              }
 
               return (
                 <g
@@ -339,10 +400,10 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                   {isHovered && (
                     <text
                       x={pos.x}
-                      y={pos.y + itemRadius + 15}
+                      y={pos.y + itemRadius + 15 * scaleFactor}
                       textAnchor="middle"
                       fill="white"
-                      fontSize="11"
+                      fontSize={11 * scaleFactor}
                       fontWeight="500"
                       style={{ pointerEvents: 'none' }}
                     >

@@ -131,10 +131,36 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
   const centerRadius = 60 * scaleFactor;
   const dialRadius = centerRadius + 40 * scaleFactor;
   const baseOrbitRadius = dialRadius + 60 * scaleFactor;
-  const orbitSpacing = 120 * scaleFactor;
+  const baseOrbitSpacing = 120 * scaleFactor;
+  
+  // Item size constants
+  const minItemRadius = 8 * scaleFactor;
+  const maxItemRadius = 32 * scaleFactor;
+  const hoverScale = mergedAnimation.hoverScale ?? 1.1;
+  const maxItemRadiusWithHover = maxItemRadius * hoverScale;
   
   // Calculate maximum available radius (leave padding for items)
-  const maxAvailableRadius = Math.min(width, height) / 2 - 50 * scaleFactor;
+  const maxAvailableRadius = Math.min(width, height) / 2 - maxItemRadiusWithHover - 20 * scaleFactor;
+
+  // Helper function to calculate maximum item radius for a group
+  const getMaxItemRadiusForGroup = (
+    items: RadialOrbitItem[],
+    minValue: number,
+    maxValue: number
+  ): number => {
+    if (items.length === 0) return minItemRadius;
+    // Find the item with maximum value (which will have maximum radius)
+    const maxValueItem = items.reduce((max, item) => 
+      item.value > max.value ? item : max, items[0]
+    );
+    return valueToRadius(
+      maxValueItem.value,
+      minValue,
+      maxValue,
+      minItemRadius,
+      maxItemRadius
+    ) * hoverScale; // Account for hover scale
+  };
 
   const processedGroups = useMemo(() => {
     // If groupOrbits is provided, reorganize groups into orbits
@@ -154,6 +180,22 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         angles: number[];
       }> = [];
 
+      // First pass: collect all orbit data and calculate max item radii
+      const orbitData: Array<{
+        orbitIndex: number;
+        orbitGroupIds: string[];
+        groups: RadialOrbitGroup[];
+        maxItemRadius: number;
+        allItems: Array<{ item: RadialOrbitItem; group: RadialOrbitGroup }>;
+        groupsWithItems: Array<{
+          group: RadialOrbitGroup;
+          sortedItems: RadialOrbitItem[];
+          minValue: number;
+          maxValue: number;
+          itemStartIndex: number;
+        }>;
+      }> = [];
+
       groupOrbits.forEach((orbitGroupIds, orbitIndex) => {
         // Get groups for this orbit
         const orbitGroups = orbitGroupIds
@@ -161,13 +203,6 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           .filter((g): g is RadialOrbitGroup => g !== undefined);
 
         if (orbitGroups.length === 0) return;
-
-        // Calculate orbit radius
-        let radius = baseOrbitRadius + orbitIndex * orbitSpacing;
-        if (radius > maxAvailableRadius) {
-          const availableForOrbits = maxAvailableRadius - baseOrbitRadius;
-          radius = baseOrbitRadius + (availableForOrbits / groupOrbits.length) * (orbitIndex + 1);
-        }
 
         // Collect all items from all groups in this orbit, maintaining order
         const allItems: Array<{ item: RadialOrbitItem; group: RadialOrbitGroup }> = [];
@@ -199,16 +234,71 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           });
         });
 
+        // Calculate maximum item radius for this orbit
+        const maxItemRadius = Math.max(
+          ...groupsWithItems.map(g => getMaxItemRadiusForGroup(g.sortedItems, g.minValue, g.maxValue)),
+          minItemRadius * hoverScale
+        );
+
+        orbitData.push({
+          orbitIndex,
+          orbitGroupIds,
+          groups: orbitGroups,
+          maxItemRadius,
+          allItems,
+          groupsWithItems,
+        });
+      });
+
+      // Second pass: calculate radii with proper spacing to avoid overlaps
+      const calculatedRadii: number[] = [];
+      orbitData.forEach((orbit, orbitIndex) => {
+        let radius: number;
+        
+        if (orbitIndex === 0) {
+          // First orbit: center items at base radius, accounting for item size
+          // Items extend from (baseOrbitRadius - maxItemRadius) to (baseOrbitRadius + maxItemRadius)
+          // We want the orbit center to be at baseOrbitRadius, so items don't overlap with center
+          radius = baseOrbitRadius + orbit.maxItemRadius;
+        } else {
+          // Subsequent orbits: ensure no overlap with previous orbit
+          // Previous orbit outer edge: prevRadius + prevMaxItemRadius
+          // Current orbit inner edge: radius - maxItemRadius
+          // Need: radius - maxItemRadius >= prevRadius + prevMaxItemRadius + padding
+          // So: radius >= prevRadius + prevMaxItemRadius + maxItemRadius + padding
+          const prevRadius = calculatedRadii[orbitIndex - 1];
+          const prevOrbit = orbitData[orbitIndex - 1];
+          const padding = 20 * scaleFactor; // Minimum padding between orbits
+          radius = prevRadius + prevOrbit.maxItemRadius + padding + orbit.maxItemRadius;
+        }
+
+        calculatedRadii.push(radius);
+      });
+
+      // Third pass: adjust radii if they exceed available space
+      const maxOuterEdge = Math.max(...calculatedRadii.map((r, i) => r + orbitData[i].maxItemRadius));
+      if (maxOuterEdge > maxAvailableRadius) {
+        // Scale down proportionally
+        const radiusScale = (maxAvailableRadius - baseOrbitRadius) / (maxOuterEdge - baseOrbitRadius);
+        calculatedRadii.forEach((radius, i) => {
+          calculatedRadii[i] = baseOrbitRadius + (radius - baseOrbitRadius) * radiusScale;
+        });
+      }
+
+      // Final pass: create processed orbits with calculated radii
+      orbitData.forEach((orbit, orbitIndex) => {
+        const radius = calculatedRadii[orbitIndex];
+
         // Distribute angles for all items in this orbit
         const angles = groupBy
-          ? distributeAnglesGrouped(allItems.length, orbitIndex, groupOrbits.length)
-          : distributeAngles(allItems.length);
+          ? distributeAnglesGrouped(orbit.allItems.length, orbitIndex, groupOrbits.length)
+          : distributeAngles(orbit.allItems.length);
 
         processedOrbits.push({
-          orbitIndex,
+          orbitIndex: orbit.orbitIndex,
           radius,
-          groups: groupsWithItems,
-          allItems,
+          groups: orbit.groupsWithItems,
+          allItems: orbit.allItems,
           angles,
         });
       });
@@ -249,34 +339,86 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     }
 
     // Default behavior: one group per orbit
-    const groups = data.groups.map((group, index) => {
+    // First pass: calculate max item radii for each group
+    const groupData = data.groups.map((group, index) => {
       const sortedItems = sortItems(group.items, sortableBy);
-      
-      // Calculate orbit radius, ensuring it fits within container
-      let radius = group.radius || baseOrbitRadius + index * orbitSpacing;
-      
-      // If radius exceeds available space, scale it down
-      if (radius > maxAvailableRadius) {
-        // Distribute available space among groups
-        const availableForOrbits = maxAvailableRadius - baseOrbitRadius;
-        radius = baseOrbitRadius + (availableForOrbits / data.groups.length) * (index + 1);
-      }
-
       const allValues = sortedItems.map((item) => item.value);
       const minValue = Math.min(...allValues);
       const maxValue = Math.max(...allValues);
+      const maxItemRadius = getMaxItemRadiusForGroup(sortedItems, minValue, maxValue);
+      
+      return {
+        group,
+        sortedItems,
+        minValue,
+        maxValue,
+        maxItemRadius,
+        index,
+      };
+    });
+
+    // Second pass: calculate radii with proper spacing
+    const calculatedRadii: number[] = [];
+    groupData.forEach((groupDataItem, index) => {
+      let radius: number;
+      
+      if (index === 0) {
+        // First orbit: center items at base radius, accounting for item size
+        radius = baseOrbitRadius + groupDataItem.maxItemRadius;
+      } else {
+        // Subsequent orbits: ensure no overlap with previous orbit
+        // Previous orbit outer edge: prevRadius + prevMaxItemRadius
+        // Current orbit inner edge: radius - maxItemRadius
+        // Need: radius - maxItemRadius >= prevRadius + prevMaxItemRadius + padding
+        // So: radius >= prevRadius + prevMaxItemRadius + maxItemRadius + padding
+        const prevRadius = calculatedRadii[index - 1];
+        const prevGroupData = groupData[index - 1];
+        const padding = 20 * scaleFactor; // Minimum padding between orbits
+        radius = prevRadius + prevGroupData.maxItemRadius + padding + groupDataItem.maxItemRadius;
+      }
+
+      // Use explicit radius if provided, but still account for item size to avoid overlaps
+      if (groupDataItem.group.radius) {
+        // If explicit radius is provided, use it but ensure it doesn't overlap with previous orbit
+        if (index > 0) {
+          const prevRadius = calculatedRadii[index - 1];
+          const prevGroupData = groupData[index - 1];
+          const padding = 20 * scaleFactor;
+          const minRadius = prevRadius + prevGroupData.maxItemRadius + padding + groupDataItem.maxItemRadius;
+          radius = Math.max(groupDataItem.group.radius + groupDataItem.maxItemRadius, minRadius);
+        } else {
+          radius = groupDataItem.group.radius + groupDataItem.maxItemRadius;
+        }
+      }
+
+      calculatedRadii.push(radius);
+    });
+
+    // Third pass: adjust radii if they exceed available space
+    const maxOuterEdge = Math.max(...calculatedRadii.map((r, i) => r + groupData[i].maxItemRadius));
+    if (maxOuterEdge > maxAvailableRadius) {
+      // Scale down proportionally
+      const radiusScale = (maxAvailableRadius - baseOrbitRadius) / (maxOuterEdge - baseOrbitRadius);
+      calculatedRadii.forEach((radius, i) => {
+        calculatedRadii[i] = baseOrbitRadius + (radius - baseOrbitRadius) * radiusScale;
+      });
+    }
+
+    // Final pass: create groups with calculated radii
+    const groups = groupData.map((groupDataItem, index) => {
+      const radius = calculatedRadii[index];
 
       // Use grouped angles if groupBy is enabled, otherwise distribute evenly
       const angles = groupBy
-        ? distributeAnglesGrouped(sortedItems.length, index, data.groups.length)
-        : distributeAngles(sortedItems.length);
+        ? distributeAnglesGrouped(groupDataItem.sortedItems.length, index, data.groups.length)
+        : distributeAngles(groupDataItem.sortedItems.length);
 
       return {
-        ...group,
-        sortedItems,
+        ...groupDataItem.group,
+        sortedItems: groupDataItem.sortedItems,
         radius,
-        minValue,
-        maxValue,
+        minValue: groupDataItem.minValue,
+        maxValue: groupDataItem.maxValue,
         angles,
         orbitIndex: index,
         itemStartIndex: 0,
@@ -292,7 +434,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     });
     
     return groups;
-  }, [data.groups, sortableBy, baseOrbitRadius, orbitSpacing, maxAvailableRadius, groupBy, groupOrbits]);
+  }, [data.groups, sortableBy, baseOrbitRadius, maxAvailableRadius, groupBy, groupOrbits, scaleFactor, hoverScale, minItemRadius, maxItemRadius]);
 
   const handleGroupHover = (
     group: RadialOrbitGroup | null,
@@ -633,9 +775,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                       const angle = group.angles[itemIndex];
                       const pos = polarToCartesian(centerX, centerY, group.radius, angle);
                       
-                      // Scale item radius based on container size
-                      const minItemRadius = 8 * scaleFactor;
-                      const maxItemRadius = 32 * scaleFactor;
+                      // Calculate item radius based on value
                       const itemRadius = valueToRadius(
                         item.value,
                         group.minValue,

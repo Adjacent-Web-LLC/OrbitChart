@@ -4,7 +4,7 @@ import { demoOrbitData } from './data/demo-orbit-data';
 import { userApplicationsData } from './data/user-applications-data';
 import { teamCollaborationData } from './data/team-collaboration-data';
 import { companySpendData } from './data/company-spend-data';
-import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps, RadialOrbitData } from './types/radial-orbit';
+import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps } from './types/radial-orbit';
 
 const demoDataSets = {
   'enterprise': { label: 'Enterprise Stack', data: demoOrbitData },
@@ -85,7 +85,7 @@ function App() {
   };
 
   // React component for custom item rendering
-  const CustomItemCard = ({ item, isHovered, radius, scale }: { item: RadialOrbitItem; isHovered: boolean; radius: number; scale: number }) => {
+  const CustomItemCard = ({ item, radius, scale }: { item: RadialOrbitItem; isHovered: boolean; radius: number; scale: number }) => {
     const size = radius * scale * 2;
     
     return (
@@ -119,9 +119,8 @@ function App() {
 
   // Custom renderer that uses foreignObject to render React component
   const customItemRenderer = (props: ItemRendererProps) => {
-    const { item, position, radius, scale, onMouseEnter, onMouseLeave, onClick, isHovered } = props;
+    const { item, radius, scale, isHovered } = props;
     const size = radius * scale * 2;
-    const halfSize = size / 2;
 
     return (
         <div

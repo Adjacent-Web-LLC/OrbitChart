@@ -575,7 +575,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           const centerAnimationKeyframes = new Map<string, { x: number; y: number }>();
           if (mergedAnimation.dataLoadedAnimation === 'center') {
             processedGroups.forEach((group) => {
-              group.sortedItems.forEach((item, itemIndex) => {
+              group.sortedItems.forEach((_item, itemIndex) => {
                 const angle = group.angles[itemIndex];
                 const pos = polarToCartesian(centerX, centerY, group.radius, angle);
                 const startTranslateX = centerX - pos.x;
@@ -903,7 +903,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           
           if (mergedAnimation.dataLoadedAnimation === 'center') {
             processedGroups.forEach((group) => {
-              group.sortedItems.forEach((item, itemIndex) => {
+              group.sortedItems.forEach((_item, itemIndex) => {
                 const angle = group.angles[itemIndex];
                 const pos = polarToCartesian(centerX, centerY, group.radius, angle);
                 const startTranslateX = centerX - pos.x;

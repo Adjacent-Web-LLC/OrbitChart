@@ -4,6 +4,7 @@ import { demoOrbitData } from './data/demo-orbit-data';
 import { userApplicationsData } from './data/user-applications-data';
 import { teamCollaborationData } from './data/team-collaboration-data';
 import { companySpendData } from './data/company-spend-data';
+import { stressTestData } from './data/stress-test-data';
 import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps } from './types/radial-orbit';
 
 const demoDataSets = {
@@ -11,6 +12,7 @@ const demoDataSets = {
   'user-apps': { label: 'User Applications', data: userApplicationsData },
   'team-collab': { label: 'Team Collaboration', data: teamCollaborationData },
   'company-spend': { label: 'Company Spend', data: companySpendData },
+  'stress-test': { label: 'Stress Test', data: stressTestData },
 } as const;
 
 type DemoDataSetKey = keyof typeof demoDataSets;

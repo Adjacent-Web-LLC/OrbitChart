@@ -53,10 +53,18 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     tooltip: 'rgba(0, 0, 0, 0.9)',
   },
   style = {},
+  enableNestedOrbits = false,
+  onZoomIn,
+  onZoomOut,
 }) => {
   const [hoveredGroup, setHoveredGroup] = useState<string | null>(null);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [selectedDial, setSelectedDial] = useState<number | null>(null);
+  const [zoomedItem, setZoomedItem] = useState<RadialOrbitItem | null>(null);
+  const [zoomAnimation, setZoomAnimation] = useState<'idle' | 'zooming-in' | 'zoomed' | 'zooming-out'>('idle');
+  const [zoomOrigin, setZoomOrigin] = useState<{ x: number; y: number; radius: number } | null>(null);
+  const [zoomedGroup, setZoomedGroup] = useState<RadialOrbitGroup | null>(null);
+  const [clickedItem, setClickedItem] = useState<RadialOrbitItem | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState>({
     visible: false,
     x: 0,
@@ -533,6 +541,11 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           <div>
             <div style={{ fontWeight: 600, fontSize: '14px' }}>{item.label}</div>
             <div style={{ fontSize: '12px', opacity: 0.75 }}>Value: {item.value}</div>
+            {enableNestedOrbits && item.nestedData && (
+              <div style={{ fontSize: '11px', opacity: 0.6, marginTop: '4px', fontStyle: 'italic' }}>
+                Click to view nested orbit
+              </div>
+            )}
             {item.meta && (
               <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
                 {Object.entries(item.meta)
@@ -552,6 +565,41 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     }
   };
 
+  const handleItemClick = (item: RadialOrbitItem, group: RadialOrbitGroup, position?: { x: number; y: number }, itemRadius?: number) => {
+    if (enableNestedOrbits && item.nestedData && !zoomedItem) {
+      // Store the clicked item and its position/radius for zoom animation
+      setClickedItem(item);
+      if (position && itemRadius !== undefined) {
+        setZoomOrigin({ x: position.x, y: position.y, radius: itemRadius });
+        setZoomedGroup(group);
+      }
+      // Start zoom animation - don't set zoomedItem yet
+      setZoomAnimation('zooming-in');
+      // After animation completes, show the nested orbit
+      setTimeout(() => {
+        setZoomedItem(item);
+        setZoomAnimation('zoomed');
+        setClickedItem(null); // Clear clicked item after transition
+        onZoomIn?.(item);
+      }, 800); // Match animation duration
+    } else {
+      // Normal click handler
+      onItemSelect?.(item, group);
+    }
+  };
+
+  const handleZoomOut = () => {
+    setZoomAnimation('zooming-out');
+    setTimeout(() => {
+      setZoomedItem(null);
+      setZoomOrigin(null);
+      setZoomedGroup(null);
+      setClickedItem(null);
+      setZoomAnimation('idle');
+      onZoomOut?.();
+    }, 800); // Match zoom-in duration
+  };
+
   const handleDialClick = (index: number) => {
     setSelectedDial(index);
     onDialSelect?.(index);
@@ -566,6 +614,236 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
     });
   }, [centerX, centerY, dialRadius]);
 
+  // If zoomed into a nested orbit, render that instead
+  if (zoomedItem && zoomedItem.nestedData && enableNestedOrbits) {
+    // Calculate transform for seamless zoom from item position to center
+    const translateX = zoomOrigin ? centerX - zoomOrigin.x : 0;
+    const translateY = zoomOrigin ? centerY - zoomOrigin.y : 0;
+    const startRadius = zoomOrigin?.radius || 20;
+    const endRadius = centerRadius;
+    const scaleRatio = endRadius / startRadius;
+    
+    // Create modified nested data with the clicked item's imageUrl in the center
+    const modifiedNestedData = {
+      ...zoomedItem.nestedData,
+      center: {
+        ...zoomedItem.nestedData.center,
+        imageUrl: zoomedItem.iconUrl || zoomedItem.nestedData.center.imageUrl,
+      },
+    };
+    
+    return (
+      <div
+        style={{
+          position: 'relative',
+          width,
+          height,
+          background: colors.background,
+          overflow: 'hidden',
+          ...style,
+        }}
+      >
+        {/* Animated item overlay that moves to center - only show during zoom-in */}
+        {zoomOrigin && zoomAnimation === 'zooming-in' && (
+          <div
+            style={{
+              position: 'absolute',
+              left: zoomOrigin.x,
+              top: zoomOrigin.y,
+              width: startRadius * 2,
+              height: startRadius * 2,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1000,
+              animation: 'item-zoom-to-center 0.8s ease-out forwards',
+              pointerEvents: 'none',
+            }}
+          >
+            {zoomedItem.iconUrl ? (
+              <img
+                src={zoomedItem.iconUrl}
+                alt={zoomedItem.label}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  objectFit: 'cover',
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  backgroundColor: zoomedItem.color || zoomedGroup?.color || '#60a5fa',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                }}
+              />
+            )}
+          </div>
+        )}
+        
+        {/* Nested orbit content - only show after animation completes */}
+        {zoomAnimation === 'zoomed' && (
+          <div
+            style={{
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              animation: 'fade-in 0.3s ease-in',
+            }}
+          >
+            <button
+              onClick={handleZoomOut}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                left: '20px',
+                zIndex: 1001,
+                padding: '8px 16px',
+                backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                border: '1px solid rgba(51, 65, 85, 1)',
+                borderRadius: '8px',
+                color: '#cbd5e1',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(51, 65, 85, 0.9)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(30, 41, 59, 0.9)';
+              }}
+            >
+              <span>←</span>
+              <span>Back to {zoomedItem.label}</span>
+            </button>
+            <RadialOrbit
+              data={modifiedNestedData}
+              width={width}
+              height={height}
+              sortableBy={sortableBy}
+              onGroupSelect={onGroupSelect}
+              onItemSelect={onItemSelect}
+              onDialSelect={onDialSelect}
+              renderItem={renderItem}
+              itemShape={itemShape}
+              groupBy={groupBy}
+              groupOrbits={groupOrbits}
+              orbitPaths={orbitPaths}
+              animation={animation}
+              colors={colors}
+              enableNestedOrbits={enableNestedOrbits}
+              onZoomIn={onZoomIn}
+              onZoomOut={onZoomOut}
+            />
+          </div>
+        )}
+        
+        <style>{`
+          @keyframes item-zoom-to-center {
+            0% {
+              transform: translate(-50%, -50%) scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(${translateX - startRadius}px, ${translateY - startRadius}px) scale(${scaleRatio});
+              opacity: 1;
+            }
+          }
+          @keyframes fade-in {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+  
+  // Show zoom animation overlay when zooming in but zoomedItem not set yet
+  if (zoomAnimation === 'zooming-in' && zoomOrigin && clickedItem && !zoomedItem) {
+    const translateX = centerX - zoomOrigin.x;
+    const translateY = centerY - zoomOrigin.y;
+    const startRadius = zoomOrigin.radius || 20;
+    const endRadius = centerRadius;
+    const scaleRatio = endRadius / startRadius;
+    
+    return (
+      <div
+        style={{
+          position: 'relative',
+          width,
+          height,
+          background: colors.background,
+          overflow: 'hidden',
+          ...style,
+        }}
+      >
+        {/* Animated item overlay that moves to center */}
+        <div
+          style={{
+            position: 'absolute',
+            left: zoomOrigin.x,
+            top: zoomOrigin.y,
+            width: startRadius * 2,
+            height: startRadius * 2,
+            transform: 'translate(-50%, -50%)',
+            zIndex: 1000,
+            animation: 'item-zoom-to-center 0.8s ease-out forwards',
+            pointerEvents: 'none',
+          }}
+        >
+          {clickedItem.iconUrl ? (
+            <img
+              src={clickedItem.iconUrl}
+              alt={clickedItem.label}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                objectFit: 'cover',
+              }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                backgroundColor: clickedItem.color || zoomedGroup?.color || '#60a5fa',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+              }}
+            />
+          )}
+        </div>
+        
+        <style>{`
+          @keyframes item-zoom-to-center {
+            0% {
+              transform: translate(-50%, -50%) scale(1);
+              opacity: 1;
+            }
+            100% {
+              transform: translate(${translateX - startRadius}px, ${translateY - startRadius}px) scale(${scaleRatio});
+              opacity: 1;
+            }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   return (
     <div
       style={{
@@ -575,6 +853,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         background: colors.background,
         overflow: 'hidden',
         ...style,
+        animation: zoomAnimation === 'zooming-out' ? 'zoom-out 0.3s ease-out' : 'none',
       }}
     >
       <svg
@@ -893,7 +1172,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                                   centerY,
                                   onMouseEnter: (e) => handleItemHover(item, e),
                                   onMouseLeave: () => handleItemHover(null),
-                                  onClick: () => onItemSelect?.(item, group),
+                                  onClick: () => handleItemClick(item, group, pos, itemRadius),
                                 })}
                               </foreignObject>
                           );
@@ -923,7 +1202,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                               centerY,
                               onMouseEnter: (e) => handleItemHover(item, e),
                               onMouseLeave: () => handleItemHover(null),
-                              onClick: () => onItemSelect?.(item, group),
+                                  onClick: () => handleItemClick(item, group, pos, itemRadius),
                             })}
                           </foreignObject>
                         );
@@ -953,14 +1232,14 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                               stroke="rgba(255, 255, 255, 0.3)"
                               strokeWidth="2"
                               filter={item.glow ? 'url(#glow)' : 'none'}
-                              style={{
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                opacity: isHovered ? 1 : 0.85,
-                              }}
+                                style={{
+                                  cursor: enableNestedOrbits && item.nestedData ? 'zoom-in' : 'pointer',
+                                  transition: 'all 0.3s ease',
+                                  opacity: isHovered ? 1 : 0.85,
+                                }}
                               onMouseEnter={(e) => handleItemHover(item, e)}
                               onMouseLeave={() => handleItemHover(null)}
-                              onClick={() => onItemSelect?.(item, group)}
+                              onClick={() => handleItemClick(item, group, pos, itemRadius)}
                             />
                             {item.iconUrl && (
                               <image
@@ -1004,14 +1283,14 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                               stroke="rgba(255, 255, 255, 0.3)"
                               strokeWidth="2"
                               filter={item.glow ? 'url(#glow)' : 'none'}
-                              style={{
-                                cursor: 'pointer',
-                                transition: 'all 0.3s ease',
-                                opacity: isHovered ? 1 : 0.85,
-                              }}
+                                style={{
+                                  cursor: enableNestedOrbits && item.nestedData ? 'zoom-in' : 'pointer',
+                                  transition: 'all 0.3s ease',
+                                  opacity: isHovered ? 1 : 0.85,
+                                }}
                               onMouseEnter={(e) => handleItemHover(item, e)}
                               onMouseLeave={() => handleItemHover(null)}
-                              onClick={() => onItemSelect?.(item, group)}
+                              onClick={() => handleItemClick(item, group, pos, itemRadius)}
                             />
                           ) : (
                             // Use foreignObject for shapes with icons or non-circle shapes
@@ -1036,7 +1315,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                                 }}
                                 onMouseEnter={(e) => handleItemHover(item, e as any)}
                                 onMouseLeave={() => handleItemHover(null)}
-                                onClick={() => onItemSelect?.(item, group)}
+                                onClick={() => handleItemClick(item, group, pos, itemRadius)}
                               />
                             </foreignObject>
                           )}

@@ -7,6 +7,7 @@ import { userApplicationsData } from './data/user-applications-data';
 import { teamCollaborationData } from './data/team-collaboration-data';
 import { companySpendData } from './data/company-spend-data';
 import { stressTestData } from './data/stress-test-data';
+import { nestedOrbitData } from './data/nested-orbit-data';
 import type { RadialOrbitGroup, RadialOrbitItem, ItemShape, ItemRendererProps } from './types/radial-orbit';
 
 const demoDataSets = {
@@ -15,6 +16,7 @@ const demoDataSets = {
   'team-collab': { label: 'Team Collaboration', data: teamCollaborationData },
   'company-spend': { label: 'Company Spend', data: companySpendData },
   'stress-test': { label: 'Stress Test', data: stressTestData },
+  'nested': { label: 'Nested Orbits', data: nestedOrbitData },
 } as const;
 
 type DemoDataSetKey = keyof typeof demoDataSets;
@@ -83,13 +85,51 @@ function App() {
   };
 
   const handleItemSelect = (item: RadialOrbitItem, group: RadialOrbitGroup) => {
-    setSelectedItem(item.id);
-    console.log('Item selected:', item, 'from group:', group.label);
+    // Only set selected item if it doesn't have nested data
+    // Items with nested data will be handled by the zoom functionality
+    if (!item.nestedData) {
+      setSelectedItem(item.id);
+      console.log('Item selected:', item, 'from group:', group.label);
+    }
   };
 
   const handleDialSelect = (index: number) => {
     setSelectedDial(index);
     console.log('Dial selected:', index);
+  };
+
+  // Custom renderer for images only (no background color, circular border)
+  const customItemRenderer = (props: ItemRendererProps) => {
+    const { item } = props;
+
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '50%',
+          overflow: 'hidden',
+          border: '2px solid rgba(255, 255, 255, 0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'transparent',
+        }}
+      >
+        {item.iconUrl && (
+          <img
+            src={item.iconUrl}
+            alt={item.label}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              objectPosition: 'center',
+            }}
+          />
+        )}
+      </div>
+    );
   };
 
   // Custom renderer for colors only (no images)
@@ -186,6 +226,7 @@ function App() {
           groupBy={groupBy}
           groupOrbits={groupOrbits}
           orbitPaths={orbitPaths}
+          enableNestedOrbits={true}
           colors={{
             background: 'transparent',
             ring: 'rgba(100, 116, 139, 0.3)',
@@ -195,7 +236,7 @@ function App() {
         />
       </div>
 
-        {/* Second Demo - Custom Renderer */}
+        {/* Third Demo - Custom Renderer */}
         <div
           style={{
             width: '100%',
@@ -226,11 +267,13 @@ function App() {
             onGroupSelect={handleGroupSelect}
             onItemSelect={handleItemSelect}
             onDialSelect={handleDialSelect}
+            renderItem={customItemRenderer}
             itemShape={itemShape}
             animation={animation}
             groupBy={groupBy}
             groupOrbits={groupOrbits}
             orbitPaths={orbitPaths}
+            enableNestedOrbits={true}
             colors={{
               background: 'transparent',
               ring: 'rgba(100, 116, 139, 0.3)',
@@ -240,7 +283,7 @@ function App() {
           />
         </div>
 
-        {/* Third Demo - Colors Only */}
+        {/* Fourth Demo - Colors Only */}
         <div
           style={{
             width: '100%',
@@ -277,6 +320,7 @@ function App() {
             groupBy={groupBy}
             groupOrbits={groupOrbits}
             orbitPaths={orbitPaths}
+            enableNestedOrbits={true}
             colors={{
               background: 'transparent',
               ring: 'rgba(100, 116, 139, 0.3)',

@@ -9,6 +9,7 @@ export type RadialOrbitItem = {
   glow?: boolean;
   iconUrl?: string;
   meta?: Record<string, any>;
+  nestedData?: RadialOrbitData; // Nested orbital chart data
 };
 
 export type RadialOrbitGroup = {
@@ -83,4 +84,7 @@ export type RadialOrbitProps = {
     tooltip?: string;
   };
   style?: CSSProperties;
+  enableNestedOrbits?: boolean; // Enable nested orbital charts
+  onZoomIn?: (item: RadialOrbitItem) => void;
+  onZoomOut?: () => void;
 };

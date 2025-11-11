@@ -26,4 +26,4 @@ alwaysApply: true
 18. Always type everything with explicit interfaces (e.g., OrbitChartProps).
 19. Do not expose implementation details or internal helpers.
 20. Write code that looks like a clean, pure React library: readable, stateless, and declarative.
-
+21. On every change to the RadialOrbit.tsx component, the documentation in the README.md should be updated

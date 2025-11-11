@@ -737,9 +737,9 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
           strokeWidth={3}
         />
 
-        {data.center.avatarUrl ? (
+        {data.center.imageUrl ? (
           <image
-            href={data.center.avatarUrl}
+            href={data.center.imageUrl}
             x={centerX - centerRadius + 10}
             y={centerY - centerRadius + 10}
             width={centerRadius * 2 - 20}

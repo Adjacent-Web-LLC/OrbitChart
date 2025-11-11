@@ -24,7 +24,7 @@ export type RadialOrbitData = {
     id: string;
     label: string;
     subtitle?: string;
-    avatarUrl?: string;
+    imageUrl?: string;
   };
   groups: RadialOrbitGroup[];
 };

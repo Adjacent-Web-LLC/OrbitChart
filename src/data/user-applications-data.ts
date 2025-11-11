@@ -5,7 +5,7 @@ export const userApplicationsData: RadialOrbitData = {
     id: 'user-john-doe',
     label: 'John Doe',
     subtitle: 'Software Engineer',
-    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JohnDoe',
+    imageUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JohnDoe',
   },
   groups: [
     {

@@ -31,7 +31,7 @@ const data: RadialOrbitData = {
     id: 'center-1',
     label: 'Center Node',
     subtitle: 'Optional Subtitle',
-    avatarUrl: 'https://example.com/avatar.png', // Optional
+    imageUrl: 'https://example.com/image.png', // Optional
   },
   groups: [
     {
@@ -77,7 +77,7 @@ type RadialOrbitData = {
     id: string;              // Unique identifier for the center
     label: string;           // Display label
     subtitle?: string;       // Optional subtitle
-    avatarUrl?: string;      // Optional avatar/image URL
+    imageUrl?: string;      // Optional image URL
   };
   groups: RadialOrbitGroup[]; // Array of groups
 };
@@ -121,7 +121,7 @@ const exampleData: RadialOrbitData = {
     id: 'company',
     label: 'ACME Corp',
     subtitle: 'Enterprise',
-    avatarUrl: 'https://example.com/logo.png',
+    imageUrl: 'https://example.com/logo.png',
   },
   groups: [
     {

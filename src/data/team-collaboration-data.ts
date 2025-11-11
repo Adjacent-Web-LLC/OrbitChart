@@ -5,7 +5,7 @@ export const teamCollaborationData: RadialOrbitData = {
     id: 'engineering-team',
     label: 'Engineering',
     subtitle: 'Product Team',
-    avatarUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=Engineering',
+    imageUrl: 'https://api.dicebear.com/7.x/shapes/svg?seed=Engineering',
   },
   groups: [
     {

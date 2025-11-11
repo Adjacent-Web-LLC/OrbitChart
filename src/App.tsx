@@ -100,7 +100,7 @@ function App() {
 
   // Custom renderer for images only (no background color, circular border)
   const customItemRenderer = (props: ItemRendererProps) => {
-    const { item } = props;
+    const { item, onClick, onMouseEnter, onMouseLeave } = props;
 
     return (
       <div
@@ -114,7 +114,11 @@ function App() {
           alignItems: 'center',
           justifyContent: 'center',
           backgroundColor: 'transparent',
+          cursor: item.nestedData ? 'zoom-in' : 'pointer',
         }}
+        onClick={() => onClick()}
+        onMouseEnter={(e) => onMouseEnter(e as unknown as React.MouseEvent<SVGElement>)}
+        onMouseLeave={onMouseLeave}
       >
         {item.iconUrl && (
           <img
@@ -125,6 +129,7 @@ function App() {
               height: '100%',
               objectFit: 'cover',
               objectPosition: 'center',
+              pointerEvents: 'none', // Prevent image from blocking clicks
             }}
           />
         )}
@@ -134,7 +139,7 @@ function App() {
 
   // Custom renderer for colors only (no images)
   const colorOnlyRenderer = (props: ItemRendererProps) => {
-    const { item, group } = props;
+    const { item, group, onClick, onMouseEnter, onMouseLeave } = props;
     
     return (
       <div
@@ -142,7 +147,11 @@ function App() {
           width: '100%',
           height: '100%',
           backgroundColor: item.color || group.color || '#60a5fa',
+          cursor: item.nestedData ? 'zoom-in' : 'pointer',
         }}
+        onClick={() => onClick()}
+        onMouseEnter={(e) => onMouseEnter(e as unknown as React.MouseEvent<SVGElement>)}
+        onMouseLeave={onMouseLeave}
       />
     );
   };

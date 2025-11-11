@@ -15,7 +15,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'mercury',
           label: 'Mercury',
-          value: 88,
+          value: 38, // ~38% of Earth's diameter (4,879 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/mercury-planet.png',
           nestedData: {
             center: { id: 'mercury-center', label: 'Mercury', subtitle: 'Moons' },
@@ -41,7 +41,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'venus',
           label: 'Venus',
-          value: 225,
+          value: 95, // ~95% of Earth's diameter (12,104 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/venus-planet.png',
           nestedData: {
             center: { id: 'venus-center', label: 'Venus', subtitle: 'Moons' },
@@ -67,7 +67,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'earth',
           label: 'Earth',
-          value: 365,
+          value: 100, // Baseline (12,756 km diameter)
           iconUrl: 'https://img.icons8.com/color/96/earth-planet.png',
           nestedData: {
             center: { id: 'earth-center', label: 'Earth', subtitle: 'Moons', imageUrl: 'https://img.icons8.com/color/96/earth-planet.png' },
@@ -99,7 +99,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'mars',
           label: 'Mars',
-          value: 687,
+          value: 53, // ~53% of Earth's diameter (6,792 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/mars-planet.png',
           nestedData: {
             center: { id: 'mars-center', label: 'Mars', subtitle: 'Moons', imageUrl: 'https://img.icons8.com/color/96/mars-planet.png' },
@@ -138,7 +138,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'jupiter',
           label: 'Jupiter',
-          value: 4333,
+          value: 1121, // ~11.2x Earth's diameter (142,984 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/jupiter-planet.png',
           nestedData: {
             center: { id: 'jupiter-center', label: 'Jupiter', subtitle: 'Major Moons', imageUrl: 'https://img.icons8.com/color/96/jupiter-planet.png' },
@@ -191,7 +191,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'saturn',
           label: 'Saturn',
-          value: 10759,
+          value: 945, // ~9.45x Earth's diameter (120,536 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/saturn-planet.png',
           nestedData: {
             center: { id: 'saturn-center', label: 'Saturn', subtitle: 'Major Moons', imageUrl: 'https://img.icons8.com/color/96/saturn-planet.png' },
@@ -237,7 +237,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'uranus',
           label: 'Uranus',
-          value: 30687,
+          value: 401, // ~4x Earth's diameter (51,118 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/uranus-planet.png',
           nestedData: {
             center: { id: 'uranus-center', label: 'Uranus', subtitle: 'Major Moons', imageUrl: 'https://img.icons8.com/color/96/uranus-planet.png' },
@@ -283,7 +283,7 @@ export const nestedOrbitData: RadialOrbitData = {
         {
           id: 'neptune',
           label: 'Neptune',
-          value: 60190,
+          value: 388, // ~3.88x Earth's diameter (49,528 km vs 12,756 km)
           iconUrl: 'https://img.icons8.com/color/96/neptune-planet.png',
           nestedData: {
             center: { id: 'neptune-center', label: 'Neptune', subtitle: 'Major Moons', imageUrl: 'https://img.icons8.com/color/96/neptune-planet.png' },

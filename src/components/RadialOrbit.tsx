@@ -1070,6 +1070,11 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
             });
           }
 
+          // Calculate global min/max values across ALL groups for proper size scaling
+          const allValues = processedGroups.flatMap(g => g.sortedItems.map(item => item.value));
+          const globalMinValue = allValues.length > 0 ? Math.min(...allValues) : 0;
+          const globalMaxValue = allValues.length > 0 ? Math.max(...allValues) : 100;
+
           // Group by orbit (radius) to handle shared orbits
           const groupsByOrbit = new Map<number, Array<typeof processedGroups[0]>>();
           processedGroups.forEach((group) => {
@@ -1115,11 +1120,11 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                       const angle = group.angles[itemIndex];
                       const pos = polarToCartesian(centerX, centerY, group.radius, angle);
                       
-                      // Calculate item radius based on value
+                      // Calculate item radius based on value using global min/max for proper scaling
                       const itemRadius = valueToRadius(
                         item.value,
-                        group.minValue,
-                        group.maxValue,
+                        globalMinValue,
+                        globalMaxValue,
                         minItemRadius,
                         maxItemRadius
                       );

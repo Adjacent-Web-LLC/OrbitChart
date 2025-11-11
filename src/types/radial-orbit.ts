@@ -47,6 +47,8 @@ export type ItemRendererProps = {
   onClick: () => void;
 };
 
+export type ItemShape = 'circle' | 'square' | 'hexagon' | 'octagon' | 'diamond' | 'pentagon' | 'star';
+
 export type RadialOrbitProps = {
   data: RadialOrbitData;
   width?: number;
@@ -56,6 +58,7 @@ export type RadialOrbitProps = {
   onItemSelect?: (item: RadialOrbitItem, group: RadialOrbitGroup) => void;
   onDialSelect?: (index: number) => void;
   renderItem?: (props: ItemRendererProps) => ReactNode;
+  itemShape?: ItemShape;
   groupBy?: boolean;
   groupOrbits?: string[][];
   orbitPaths?: {

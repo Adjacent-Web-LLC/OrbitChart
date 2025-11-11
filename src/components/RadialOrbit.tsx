@@ -3,6 +3,7 @@ import type {
   RadialOrbitProps,
   RadialOrbitGroup,
   RadialOrbitItem,
+  ItemShape,
 } from '../types/radial-orbit';
 import {
   valueToRadius,
@@ -28,6 +29,7 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
   onItemSelect,
   onDialSelect,
   renderItem,
+  itemShape = 'circle',
   groupBy = false,
   groupOrbits,
   orbitPaths = {
@@ -121,6 +123,65 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
         animationFillMode: 'backwards',
       },
     };
+  };
+
+  // Helper function to get shape styles
+  const getShapeStyles = (shape: ItemShape): React.CSSProperties => {
+    const baseStyle: React.CSSProperties = {
+      overflow: 'hidden',
+      border: '2px solid rgba(255, 255, 255, 0.3)',
+      transition: 'all 0.3s ease',
+      cursor: 'pointer',
+      boxSizing: 'border-box',
+    };
+
+    switch (shape) {
+      case 'circle':
+        return {
+          ...baseStyle,
+          borderRadius: '50%',
+        };
+      case 'square':
+        return {
+          ...baseStyle,
+          borderRadius: '0%',
+        };
+      case 'hexagon':
+        return {
+          ...baseStyle,
+          clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+          borderRadius: '0%',
+        };
+      case 'octagon':
+        return {
+          ...baseStyle,
+          clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)',
+          borderRadius: '0%',
+        };
+      case 'diamond':
+        return {
+          ...baseStyle,
+          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+          borderRadius: '0%',
+        };
+      case 'pentagon':
+        return {
+          ...baseStyle,
+          clipPath: 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)',
+          borderRadius: '0%',
+        };
+      case 'star':
+        return {
+          ...baseStyle,
+          clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+          borderRadius: '0%',
+        };
+      default:
+        return {
+          ...baseStyle,
+          borderRadius: '50%',
+        };
+    }
   };
   
   // Calculate scale factor based on container size (using minimum dimension for square aspect ratio)
@@ -788,16 +849,15 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                       const isGroupHovered = hoveredGroup === group.id;
                       const scale =
                         isHovered || isGroupHovered ? mergedAnimation.hoverScale : 1;
+                      const animationData = getDataLoadedAnimationStyle(
+                        itemIndex,
+                        pos.x,
+                        pos.y,
+                        centerX,
+                        centerY
+                      );
 
                       if (renderItem) {
-                        const animationData = getDataLoadedAnimationStyle(
-                          itemIndex,
-                          pos.x,
-                          pos.y,
-                          centerX,
-                          centerY
-                        );
-                        
                         // For center animation, wrap in a group with CSS transform
                         if (mergedAnimation.dataLoadedAnimation === 'center') {
                           const startTranslateX = centerX - pos.x;
@@ -805,20 +865,18 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                           const animationId = `fromCenter-${Math.round(startTranslateX)}-${Math.round(startTranslateY)}`;
                           
                         return (
-                          <g
-                            key={item.id}
-                            style={{
-                              animation: `${animationId} 0.5s ease-out`,
-                              animationDelay: `${itemIndex * 0.05}s`,
-                              animationFillMode: 'backwards',
-                              transformOrigin: `${centerX}px ${centerY}px`,
-                            }}
-                          >
                               <foreignObject
                                 x={pos.x - itemRadius * 0.55}
                                 y={pos.y - itemRadius * 0.55}
                                 width={itemRadius * 1.1}
                                 height={itemRadius * 1.1}
+                                key={item.id}
+                                style={{
+                                  animation: `${animationId} 0.5s ease-out`,
+                                  animationDelay: `${itemIndex * 0.05}s`,
+                                  animationFillMode: 'backwards',
+                                  transformOrigin: `${centerX}px ${centerY}px`,
+                                }}
                               >
                                 {renderItem({
                                   item,
@@ -838,7 +896,6 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                                   onClick: () => onItemSelect?.(item, group),
                                 })}
                               </foreignObject>
-                            </g>
                           );
                         }
                         
@@ -871,14 +928,6 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                           </foreignObject>
                         );
                       }
-
-                      const animationData = getDataLoadedAnimationStyle(
-                        itemIndex,
-                        pos.x,
-                        pos.y,
-                        centerX,
-                        centerY
-                      );
 
                       // For center animation, wrap in a group with CSS transform
                       if (mergedAnimation.dataLoadedAnimation === 'center') {
@@ -945,32 +994,51 @@ const RadialOrbit: React.FC<RadialOrbitProps> = ({
                           key={item.id}
                           style={animationData.style}
                         >
-                          <circle
-                            cx={pos.x}
-                            cy={pos.y}
-                            r={itemRadius * scale}
-                            fill={item.color || group.color || '#60a5fa'}
-                            stroke="rgba(255, 255, 255, 0.3)"
-                            strokeWidth="2"
-                            filter={item.glow ? 'url(#glow)' : 'none'}
-                            style={{
-                              cursor: 'pointer',
-                              transition: 'all 0.3s ease',
-                              opacity: isHovered ? 1 : 0.85,
-                            }}
-                            onMouseEnter={(e) => handleItemHover(item, e)}
-                            onMouseLeave={() => handleItemHover(null)}
-                            onClick={() => onItemSelect?.(item, group)}
-                          />
-                          {item.iconUrl && (
-                            <image
-                              href={item.iconUrl}
-                              x={pos.x - itemRadius * 0.55}
-                              y={pos.y - itemRadius * 0.55}
-                              width={itemRadius * 1.1}
-                              height={itemRadius * 1.1}
-                              style={{ pointerEvents: 'none' }}
+                          {itemShape === 'circle' && !item.iconUrl ? (
+                            // Use SVG circle for simple circles without icons (more performant)
+                            <circle
+                              cx={pos.x}
+                              cy={pos.y}
+                              r={itemRadius * scale}
+                              fill={item.color || group.color || '#60a5fa'}
+                              stroke="rgba(255, 255, 255, 0.3)"
+                              strokeWidth="2"
+                              filter={item.glow ? 'url(#glow)' : 'none'}
+                              style={{
+                                cursor: 'pointer',
+                                transition: 'all 0.3s ease',
+                                opacity: isHovered ? 1 : 0.85,
+                              }}
+                              onMouseEnter={(e) => handleItemHover(item, e)}
+                              onMouseLeave={() => handleItemHover(null)}
+                              onClick={() => onItemSelect?.(item, group)}
                             />
+                          ) : (
+                            // Use foreignObject for shapes with icons or non-circle shapes
+                            <foreignObject
+                              x={pos.x - itemRadius * scale}
+                              y={pos.y - itemRadius * scale}
+                              width={itemRadius * scale * 2}
+                              height={itemRadius * scale * 2}
+                            >
+                              <div
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  ...getShapeStyles(itemShape),
+                                  backgroundColor: item.color || group.color || '#60a5fa',
+                                  backgroundImage: item.iconUrl ? `url(${item.iconUrl})` : undefined,
+                                  backgroundSize: 'cover',
+                                  backgroundPosition: 'center',
+                                  backgroundRepeat: 'no-repeat',
+                                  opacity: isHovered ? 1 : 0.85,
+                                  filter: item.glow ? 'drop-shadow(0 0 4px rgba(96, 165, 250, 0.8))' : 'none',
+                                }}
+                                onMouseEnter={(e) => handleItemHover(item, e as any)}
+                                onMouseLeave={() => handleItemHover(null)}
+                                onClick={() => onItemSelect?.(item, group)}
+                              />
+                            </foreignObject>
                           )}
                           {isHovered && (
                             <text

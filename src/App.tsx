@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import RadialOrbit from './components/RadialOrbit';
 import { demoOrbitData } from './data/demo-orbit-data';
 import { userApplicationsData } from './data/user-applications-data';
 import { teamCollaborationData } from './data/team-collaboration-data';
 import { companySpendData } from './data/company-spend-data';
 import { stressTestData } from './data/stress-test-data';
-import type { RadialOrbitGroup, RadialOrbitItem, ItemRendererProps } from './types/radial-orbit';
+import type { RadialOrbitGroup, RadialOrbitItem, ItemShape, ItemRendererProps } from './types/radial-orbit';
 
 const demoDataSets = {
   'enterprise': { label: 'Enterprise Stack', data: demoOrbitData },
@@ -62,6 +62,8 @@ function App() {
     hoverOpacity: 0.9,
   });
   
+  const [itemShape, setItemShape] = useState<ItemShape>('circle');
+  
   // Update visibleGroups when data set changes.
   useEffect(() => {
     const newVisibleGroups: Record<string, boolean> = {};
@@ -86,25 +88,16 @@ function App() {
     console.log('Dial selected:', index);
   };
 
-  // Custom renderer that uses foreignObject to render React component
-  const customItemRenderer = (props: ItemRendererProps) => {
-    const { item, radius, scale } = props;
-
+  // Custom renderer for colors only (no images)
+  const colorOnlyRenderer = (props: ItemRendererProps) => {
+    const { item, group } = props;
+    
     return (
       <div
         style={{
           width: '100%',
           height: '100%',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          border: '2px solid rgba(255, 255, 255, 0.3)',
-          backgroundImage: `url(${item.iconUrl})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-          transition: 'all 0.3s ease',
-          cursor: 'pointer',
-          boxSizing: 'border-box',
+          backgroundColor: item.color || group.color || '#60a5fa',
         }}
       />
     );
@@ -1090,6 +1083,46 @@ function App() {
             )}
           </div>
         </div>
+
+        {/* Item Shape Controls */}
+        <div style={{ marginBottom: '32px' }}>
+          <h3
+            style={{
+              color: '#94a3b8',
+              fontSize: '14px',
+              fontWeight: 600,
+              marginBottom: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+          >
+            Item Shape
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <select
+              value={itemShape}
+              onChange={(e) => setItemShape(e.target.value as ItemShape)}
+              style={{
+                width: '100%',
+                padding: '8px 12px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                border: '1px solid rgba(51, 65, 85, 1)',
+                color: '#cbd5e1',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="circle">Circle</option>
+              <option value="square">Square</option>
+              <option value="hexagon">Hexagon</option>
+              <option value="octagon">Octagon</option>
+              <option value="diamond">Diamond</option>
+              <option value="pentagon">Pentagon</option>
+              <option value="star">Star</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -1122,6 +1155,7 @@ function App() {
           onGroupSelect={handleGroupSelect}
           onItemSelect={handleItemSelect}
           onDialSelect={handleDialSelect}
+          itemShape={itemShape}
           animation={animation}
           groupBy={groupBy}
           groupOrbits={groupOrbits}
@@ -1166,7 +1200,53 @@ function App() {
             onGroupSelect={handleGroupSelect}
             onItemSelect={handleItemSelect}
             onDialSelect={handleDialSelect}
-            renderItem={customItemRenderer}
+            itemShape={itemShape}
+            animation={animation}
+            groupBy={groupBy}
+            groupOrbits={groupOrbits}
+            orbitPaths={orbitPaths}
+            colors={{
+              background: 'transparent',
+              ring: 'rgba(100, 116, 139, 0.3)',
+              center: '#1e293b',
+              tooltip: 'rgba(15, 23, 42, 0.95)',
+            }}
+          />
+        </div>
+
+        {/* Third Demo - Colors Only */}
+        <div
+          style={{
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '20px',
+            overflow: 'hidden',
+            minHeight: chartSize.height + 40,
+          }}
+        >
+          <div
+            style={{
+              color: 'white',
+              fontSize: '24px',
+              fontWeight: 'bold',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            Colors Only
+          </div>
+          <RadialOrbit
+            data={filteredData}
+            width={chartSize.width}
+            height={chartSize.height}
+            sortableBy="value"
+            onGroupSelect={handleGroupSelect}
+            onItemSelect={handleItemSelect}
+            onDialSelect={handleDialSelect}
+            renderItem={colorOnlyRenderer}
+            itemShape={itemShape}
             animation={animation}
             groupBy={groupBy}
             groupOrbits={groupOrbits}
